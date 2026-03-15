@@ -13,6 +13,7 @@ import AgentNode from './AgentNode';
 import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
 import { useAgentState } from './useAgentState';
+import ESMApp from './esm/ESMApp';
 
 const nodeTypes = { agent: AgentNode };
 
@@ -82,6 +83,7 @@ function buildEdges(edges) {
 const statusCount = (agents, status) => agents.filter(a => a.status === status).length;
 
 export default function App() {
+  const [appMode, setAppMode] = useState('esm'); // 'esm' | 'monitor'
   const { agents, edges: rawEdges, connected, lastUpdated } = useAgentState();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -109,6 +111,25 @@ export default function App() {
   const done    = statusCount(agents, 'done');
   const idle    = statusCount(agents, 'idle');
 
+  if (appMode === 'esm') {
+    return (
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <ESMApp />
+        <button
+          onClick={() => setAppMode('monitor')}
+          style={{
+            position: 'fixed', bottom: 16, right: 16, zIndex: 999,
+            background: '#0f172a', color: '#64748b', border: '1px solid #1e293b',
+            borderRadius: 8, padding: '6px 12px', fontSize: 11, cursor: 'pointer',
+            fontFamily: 'system-ui, sans-serif',
+          }}
+        >
+          🧠 Agent Monitor
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       display: 'flex',
@@ -127,7 +148,11 @@ export default function App() {
         gap: 24,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 18, fontWeight: 700 }}>🧠 Agent Monitor</span>
+          <button onClick={() => setAppMode('esm')} style={{
+            background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          }}>
+            <span style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9' }}>🧠 Agent Monitor</span>
+          </button>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
             padding: '2px 10px', borderRadius: 20, fontSize: 11,
