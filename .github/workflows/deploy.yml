@@ -42,9 +42,35 @@ jobs:
             --sku Basic --admin-enabled true \
             --output none 2>/dev/null || true
 
-          az containerapp env create \
-            --name $ENV_NAME --resource-group $RG --location $LOCATION \
-            --output none 2>/dev/null || true
+          # Maak env aan als die nog niet bestaat
+          ENV_STATE=$(az containerapp env show \
+            --name $ENV_NAME --resource-group $RG \
+            --query "properties.provisioningState" --output tsv 2>/dev/null || echo "NotFound")
+
+          if [ "$ENV_STATE" = "NotFound" ]; then
+            echo "Container Apps environment aanmaken..."
+            az containerapp env create \
+              --name $ENV_NAME --resource-group $RG --location $LOCATION \
+              --output none
+          fi
+
+          # Wacht tot de environment volledig is ingericht (max 10 minuten)
+          echo "Wachten op Container Apps environment..."
+          for i in $(seq 1 30); do
+            STATE=$(az containerapp env show \
+              --name $ENV_NAME --resource-group $RG \
+              --query "properties.provisioningState" --output tsv 2>/dev/null || echo "Unknown")
+            echo "  Status: $STATE ($i/30)"
+            if [ "$STATE" = "Succeeded" ]; then
+              echo "Environment klaar."
+              break
+            fi
+            if [ "$STATE" = "Failed" ]; then
+              echo "Environment aanmaken mislukt."
+              exit 1
+            fi
+            sleep 20
+          done
 
       # 4. Inloggen bij ACR
       - name: ACR login
