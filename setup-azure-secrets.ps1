@@ -6,7 +6,7 @@
 # =============================================================================
 
 $RG       = "rg-serviceportaal"
-$LOCATION = "westeurope"
+$LOCATION = "northeurope"
 
 Write-Host ""
 Write-Host "ServicePortaal — GitHub Secrets setup" -ForegroundColor Magenta

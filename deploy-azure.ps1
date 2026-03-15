@@ -19,7 +19,7 @@ param(
 
 # ---------- Configuratie (pas hier aan indien gewenst) ----------
 
-$LOCATION    = "westeurope"           # Nederland-dichtbij regio
+$LOCATION    = "northeurope"          # Nederland-dichtbij regio
 $RG          = "rg-serviceportaal"
 $ACR_NAME    = "acrserviceportaal"    # Moet uniek zijn in Azure (alleen lowercase letters/cijfers)
 $ENV_NAME    = "cae-serviceportaal"

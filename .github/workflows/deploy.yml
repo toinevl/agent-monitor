@@ -12,7 +12,7 @@ env:
   APP_NAME:  serviceportaal
   RG:        rg-serviceportaal
   ENV_NAME:  cae-serviceportaal
-  LOCATION:  westeurope
+  LOCATION:  northeurope
 
 jobs:
   deploy:
