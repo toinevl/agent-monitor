@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
 const INTENT_META = {
   IT_INCIDENT: { label: 'IT Storing', color: '#ef4444', bg: '#fef2f2', icon: '🔴' },
