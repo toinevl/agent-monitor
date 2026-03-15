@@ -87,8 +87,23 @@ app.post('/api/esm/chat', async (req, res) => {
   const { message, history = [], userId = 'user-1', userName = 'Medewerker' } = req.body;
   if (!message) return res.status(400).json({ error: 'message required' });
 
-  const msgs = history.map(h => ({ role: h.role, content: h.content }));
-  msgs.push({ role: 'user', content: message });
+  // Build message array: strip trailing user messages from history (we'll append the real one),
+  // then ensure strict user/assistant alternation required by Claude.
+  const rawHistory = history
+    .map(h => ({ role: h.role, content: h.content }))
+    .filter(h => h.role === 'user' || h.role === 'assistant');
+
+  // Remove consecutive duplicate roles (keeps first of each run)
+  const deduped = rawHistory.filter(
+    (h, i) => i === 0 || h.role !== rawHistory[i - 1].role,
+  );
+
+  // Drop any trailing assistant message so we can safely append the user turn
+  while (deduped.length && deduped[deduped.length - 1].role === 'assistant') {
+    deduped.pop();
+  }
+
+  const msgs = [...deduped, { role: 'user', content: message }];
 
   try {
     const response = await anthropic.messages.create({
