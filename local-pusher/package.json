@@ -1,0 +1,8 @@
+{
+  "name": "agent-monitor-pusher",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node pusher.js"
+  }
+}
