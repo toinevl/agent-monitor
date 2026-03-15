@@ -18,15 +18,23 @@ const POLL_MS    = 3000;
 // ---------- Session → Agent transform ----------
 
 function classifySession(session) {
-  const label = (session.label || session.key || '').toLowerCase();
+  const key   = (session.key   || '').toLowerCase();
+  const label = (session.label || '').toLowerCase();
   const kind  = (session.kind  || '').toLowerCase();
 
-  if (kind === 'direct' || label.includes('main')) return 'orchestrator';
-  if (label.includes('invest') || label.includes('research')) return 'investigator';
-  if (label.includes('work')  || label.includes('write') || label.includes('exec')) return 'worker';
+  // Only the true main session is the orchestrator
+  if (key === 'agent:main:main') return 'orchestrator';
 
-  // sub-agents default to worker
+  // Named investigator sub-agents
+  if (label.includes('invest') || label.includes('research')) return 'investigator';
+
+  // Named worker sub-agents
+  if (label.includes('work') || label.includes('write') || label.includes('exec') || label.includes('report') || label.includes('synth')) return 'worker';
+
+  // Sub-agents by kind
   if (kind === 'subagent' || kind === 'acp') return 'worker';
+
+  // Other direct sessions (slash commands, channel sessions) → worker
   return 'worker';
 }
 
