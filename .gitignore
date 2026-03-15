@@ -5,5 +5,4 @@ dist/
 .env.*
 *.log
 .pnpm-store/
-pnpm-lock.yaml
 package-lock.json
