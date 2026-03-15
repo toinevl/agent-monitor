@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { dirname } from 'path';
 import Anthropic from '@anthropic-ai/sdk';
+import { ProxyAgent } from 'undici';
 
 const PORT = process.env.PORT || 3001;
 const PUSH_SECRET = 'oc-push-sk-7f3a9d2e1b8c4f6a';
@@ -25,7 +26,11 @@ const ESM_KNOWLEDGE_BASE = [
   { q: 'onboarding nieuwe medewerker', a: 'Nieuw personeel wordt aangemeld via HR via het onboardingformulier. IT ontvangt automatisch een verzoek voor accounts en toegang.', category: 'HR' },
 ];
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const proxyUrl = process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.HTTPS_PROXY || process.env.https_proxy;
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  ...(proxyUrl && { fetchOptions: { dispatcher: new ProxyAgent(proxyUrl) } }),
+});
 
 const ESM_SYSTEM_PROMPT = `Je bent een slimme, vriendelijke servicedeskmedewerker voor een Enterprise Service Management systeem. Je helpt medewerkers met IT-support, HR-verzoeken en algemene vragen.
 
