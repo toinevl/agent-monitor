@@ -28,7 +28,7 @@ properties:
 
   - name: caddy
     properties:
-      image: ghcr.io/caddyserver/caddy:v2-alpine
+      image: acrtvvregistry.azurecr.io/caddy:2-alpine
       ports:
       - port: 80
         protocol: TCP
@@ -52,6 +52,11 @@ properties:
       protocol: TCP
     - port: 443
       protocol: TCP
+
+  imageRegistryCredentials:
+  - server: acrtvvregistry.azurecr.io
+    username: VERVANG_MET_ACR_USER
+    password: VERVANG_MET_ACR_PASS
 
   osType: Linux
   restartPolicy: Always
