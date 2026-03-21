@@ -1,0 +1,69 @@
+apiVersion: '2021-10-01'
+name: searxng
+location: northeurope
+type: Microsoft.ContainerInstance/containerGroups
+properties:
+  containers:
+  - name: searxng
+    properties:
+      image: searxng/searxng:latest
+      ports:
+      - port: 8080
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 0.75
+          memoryInGB: 0.75
+      environmentVariables:
+      - name: SEARXNG_BASE_URL
+        value: https://search.van-vliet.eu/
+      - name: SEARXNG_SEARCH__FORMATS
+        value: '[html,json]'
+      - name: SEARXNG_SERVER__LIMITER
+        value: 'false'
+      - name: SEARXNG_SERVER__IMAGE_PROXY
+        value: 'false'
+      - name: SEARXNG_SECRET_KEY
+        secureValue: a549e6a2225b77b0c5d114639d1afb828e292cadae12bea5f73d3e3003f32629
+
+  - name: caddy
+    properties:
+      image: caddy:2-alpine
+      ports:
+      - port: 80
+        protocol: TCP
+      - port: 443
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 0.25
+          memoryInGB: 0.25
+      volumeMounts:
+      - name: caddy-data
+        mountPath: /data
+      - name: caddy-config
+        mountPath: /etc/caddy
+
+  ipAddress:
+    type: Public
+    dnsNameLabel: searxng-d415143d
+    ports:
+    - port: 80
+      protocol: TCP
+    - port: 443
+      protocol: TCP
+
+  osType: Linux
+  restartPolicy: Always
+
+  volumes:
+  - name: caddy-data
+    azureFile:
+      shareName: caddy-data
+      storageAccountName: stcaddyvanvliet
+      storageAccountKey: VERVANG_MET_STORAGE_KEY
+  - name: caddy-config
+    azureFile:
+      shareName: caddy-config
+      storageAccountName: stcaddyvanvliet
+      storageAccountKey: VERVANG_MET_STORAGE_KEY

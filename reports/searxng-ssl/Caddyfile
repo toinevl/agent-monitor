@@ -1,0 +1,3 @@
+search.van-vliet.eu {
+    reverse_proxy localhost:8080
+}
