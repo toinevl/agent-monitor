@@ -28,7 +28,7 @@ properties:
 
   - name: caddy
     properties:
-      image: caddy:2-alpine
+      image: ghcr.io/caddyserver/caddy:v2-alpine
       ports:
       - port: 80
         protocol: TCP
