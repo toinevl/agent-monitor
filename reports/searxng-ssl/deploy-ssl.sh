@@ -45,7 +45,12 @@ echo "Caddyfile geupload."
 echo ""
 echo "=== Stap 4: ACI YAML voorbereiden ==="
 curl -s -o /tmp/searxng-aci.yaml $GITHUB_RAW/searxng-aci.yaml
-sed -i "s/VERVANG_MET_STORAGE_KEY/$STORAGE_KEY/g" /tmp/searxng-aci.yaml
+python3 -c "
+import sys
+content = open('/tmp/searxng-aci.yaml').read()
+content = content.replace('VERVANG_MET_STORAGE_KEY', sys.argv[1])
+open('/tmp/searxng-aci.yaml', 'w').write(content)
+" "$STORAGE_KEY"
 echo "YAML klaar."
 
 echo ""
