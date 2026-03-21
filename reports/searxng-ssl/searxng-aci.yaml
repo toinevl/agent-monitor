@@ -12,8 +12,8 @@ properties:
         protocol: TCP
       resources:
         requests:
-          cpu: 0.75
-          memoryInGB: 0.75
+          cpu: 1.0
+          memoryInGB: 1.0
       environmentVariables:
       - name: SEARXNG_BASE_URL
         value: https://search.van-vliet.eu/
@@ -36,8 +36,8 @@ properties:
         protocol: TCP
       resources:
         requests:
-          cpu: 0.25
-          memoryInGB: 0.25
+          cpu: 0.5
+          memoryInGB: 0.5
       volumeMounts:
       - name: caddy-data
         mountPath: /data
