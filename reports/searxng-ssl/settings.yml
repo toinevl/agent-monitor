@@ -1,0 +1,14 @@
+use_default_settings: true
+
+server:
+  secret_key: "a549e6a2225b77b0c5d114639d1afb828e292cadae12bea5f73d3e3003f32629"
+  base_url: "https://search.van-vliet.eu/"
+  limiter: false
+  image_proxy: false
+  method: "GET"
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json

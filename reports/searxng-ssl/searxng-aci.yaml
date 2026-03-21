@@ -25,6 +25,9 @@ properties:
         value: 'false'
       - name: SEARXNG_SECRET_KEY
         secureValue: a549e6a2225b77b0c5d114639d1afb828e292cadae12bea5f73d3e3003f32629
+      volumeMounts:
+      - name: searxng-config
+        mountPath: /etc/searxng
 
   - name: caddy
     properties:
@@ -70,5 +73,10 @@ properties:
   - name: caddy-config
     azureFile:
       shareName: caddy-config
+      storageAccountName: stcaddyvanvliet
+      storageAccountKey: VERVANG_MET_STORAGE_KEY
+  - name: searxng-config
+    azureFile:
+      shareName: searxng-config
       storageAccountName: stcaddyvanvliet
       storageAccountKey: VERVANG_MET_STORAGE_KEY
