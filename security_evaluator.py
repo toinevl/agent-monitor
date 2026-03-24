@@ -4,6 +4,8 @@ Scans source files for common security vulnerabilities and reports findings.
 """
 
 import ast
+import bisect
+import os
 import re
 import sys
 import json
@@ -23,6 +25,15 @@ SEVERITY_MEDIUM = "MEDIUM"
 SEVERITY_LOW = "LOW"
 SEVERITY_INFO = "INFO"
 
+# Fix #4: O(1) severity lookup dict (used by ScanResult and reporting)
+_SEVERITY_ORDER: dict[str, int] = {
+    SEVERITY_CRITICAL: 0,
+    SEVERITY_HIGH:     1,
+    SEVERITY_MEDIUM:   2,
+    SEVERITY_LOW:      3,
+    SEVERITY_INFO:     4,
+}
+
 
 @dataclass
 class Finding:
@@ -38,17 +49,22 @@ class Finding:
 @dataclass
 class ScanResult:
     files_scanned: int = 0
-    findings: list = field(default_factory=list)
+    # Fix #13: early filtering — add() drops findings below the threshold
+    # severity_threshold uses _SEVERITY_ORDER indices: 0=CRITICAL … 4=INFO
+    severity_threshold: int = 4  # default: include everything up to INFO
+    findings: list[Finding] = field(default_factory=list)  # Fix #11: typed list
 
     def add(self, finding: Finding):
-        self.findings.append(finding)
+        # Fix #13: filter at insertion time, not post-scan
+        if _SEVERITY_ORDER.get(finding.severity, 99) <= self.severity_threshold:
+            self.findings.append(finding)
 
     def by_severity(self):
-        order = [SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW, SEVERITY_INFO]
-        return sorted(self.findings, key=lambda f: order.index(f.severity))
+        # Fix #4: O(1) per finding via dict instead of list.index()
+        return sorted(self.findings, key=lambda f: _SEVERITY_ORDER.get(f.severity, 99))
 
     def summary(self):
-        counts = {}
+        counts: dict[str, int] = {}
         for f in self.findings:
             counts[f.severity] = counts.get(f.severity, 0) + 1
         return counts
@@ -58,12 +74,41 @@ class ScanResult:
 # Rule helpers
 # ---------------------------------------------------------------------------
 
+# Fix #5: refuse to read files larger than this to avoid OOM / hangs
+MAX_FILE_BYTES = 1 * 1024 * 1024  # 1 MB
+
+# Fix #8: skip assert flagging inside test files
+_TEST_FILE_RE = re.compile(
+    r'(^|[/\\])tests?[/\\]|(^|[/\\])test_|_tests?\.py$', re.IGNORECASE
+)
+
+
+def _is_test_file(filepath: str) -> bool:
+    return bool(_TEST_FILE_RE.search(filepath))
+
+
 def _snippet(lines: list[str], lineno: int, context: int = 0) -> str:
     start = max(0, lineno - 1 - context)
     end = min(len(lines), lineno + context)
     return "\n".join(
         f"  {i+1:4d} | {lines[i]}" for i in range(start, end)
     ).rstrip()
+
+
+# Fix #2: precompute line-start offsets once per file for O(log n) lookups
+def _build_line_offsets(text: str) -> list[int]:
+    """Return sorted list of character offsets where each line starts."""
+    offsets = [0]
+    pos = text.find("\n")
+    while pos != -1:
+        offsets.append(pos + 1)
+        pos = text.find("\n", pos + 1)
+    return offsets
+
+
+def _lineno_at(offsets: list[int], char_offset: int) -> int:
+    """Return 1-based line number for the given character offset."""
+    return bisect.bisect_right(offsets, char_offset)
 
 
 # ---------------------------------------------------------------------------
@@ -124,10 +169,6 @@ SQL_INJECTION_PATTERN = re.compile(
     r'(?i)(execute|query|raw|cursor\.execute)\s*\(\s*["\'].*?(%s|{|}|format|%\s*\()',
 )
 
-SHELL_TRUE_PATTERN = re.compile(r'shell\s*=\s*True')
-
-PATH_TRAVERSAL_PATTERN = re.compile(r'(?i)(open|read|write)\s*\(\s*.*\.\s*(join|format|replace)')
-
 
 class PythonASTVisitor(ast.NodeVisitor):
     """Walk a Python AST and collect security findings."""
@@ -179,7 +220,6 @@ class PythonASTVisitor(ast.NodeVisitor):
 
     def _resolve_call(self, node) -> str:
         if isinstance(node, ast.Name):
-            # Check if it maps to a known dangerous full name
             full = self._imports.get(node.id, node.id)
             return full
         if isinstance(node, ast.Attribute):
@@ -188,6 +228,10 @@ class PythonASTVisitor(ast.NodeVisitor):
         return ""
 
     def visit_Assert(self, node: ast.Assert):
+        # Fix #8: assert is noise in test files; only flag production code
+        if _is_test_file(self.filepath):
+            self.generic_visit(node)
+            return
         # assert statements are stripped with python -O
         self._add(node, SEVERITY_LOW, "SEC050", "Security check via assert",
                   "assert statements are removed when Python runs with optimisations (-O). "
@@ -199,13 +243,15 @@ class PythonASTVisitor(ast.NodeVisitor):
 # Generic text-based rules (language-agnostic)
 # ---------------------------------------------------------------------------
 
-def scan_text_rules(filepath: str, lines: list[str], result: ScanResult):
-    text = "\n".join(lines)
+# Fix #3: accept `text` directly to avoid re-joining lines and duplicating memory
+def scan_text_rules(filepath: str, text: str, lines: list[str], result: ScanResult):
+    # Fix #2: build offset map once; lookups are O(log n) via bisect
+    line_offsets = _build_line_offsets(text)
 
     # Hardcoded secrets
     for pattern, severity, rule_id, title, description in HARDCODED_SECRET_PATTERNS:
         for m in pattern.finditer(text):
-            lineno = text[: m.start()].count("\n") + 1
+            lineno = _lineno_at(line_offsets, m.start())
             result.add(Finding(
                 file=filepath, line=lineno, severity=severity,
                 rule_id=rule_id, title=title, description=description,
@@ -215,7 +261,7 @@ def scan_text_rules(filepath: str, lines: list[str], result: ScanResult):
     # Insecure hashes
     for pattern, severity, rule_id, title, description in INSECURE_HASH_PATTERNS:
         for m in pattern.finditer(text):
-            lineno = text[: m.start()].count("\n") + 1
+            lineno = _lineno_at(line_offsets, m.start())
             result.add(Finding(
                 file=filepath, line=lineno, severity=severity,
                 rule_id=rule_id, title=title, description=description,
@@ -224,7 +270,7 @@ def scan_text_rules(filepath: str, lines: list[str], result: ScanResult):
 
     # SQL injection hints
     for m in SQL_INJECTION_PATTERN.finditer(text):
-        lineno = text[: m.start()].count("\n") + 1
+        lineno = _lineno_at(line_offsets, m.start())
         result.add(Finding(
             file=filepath, line=lineno, severity=SEVERITY_HIGH,
             rule_id="SEC060", title="Potential SQL injection",
@@ -242,7 +288,7 @@ PYTHON_EXTENSIONS = {".py"}
 TEXT_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx", ".java", ".go",
                    ".rb", ".php", ".cs", ".cpp", ".c", ".h", ".sh", ".yaml", ".yml", ".env"}
 
-# Files/dirs to skip
+# Fix #1: used by os.walk to prune traversal before entering skip dirs
 SKIP_DIRS = {"__pycache__", ".git", "node_modules", ".venv", "venv", "dist", "build"}
 SKIP_FILES = {".DS_Store"}
 
@@ -254,8 +300,15 @@ def scan_file(path: Path, result: ScanResult):
     if suffix not in TEXT_EXTENSIONS:
         return
 
+    # Fix #5: skip oversized files to avoid OOM
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        if path.stat().st_size > MAX_FILE_BYTES:
+            return
+    except OSError:
+        return
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")  # Fix #7: ignore non-UTF-8 bytes
     except OSError:
         return
 
@@ -263,8 +316,8 @@ def scan_file(path: Path, result: ScanResult):
     result.files_scanned += 1
     filepath = str(path)
 
-    # Text-based rules for all supported extensions
-    scan_text_rules(filepath, lines, result)
+    # Fix #3: pass text directly — no re-join inside scan_text_rules
+    scan_text_rules(filepath, text, lines, result)
 
     # Python AST rules
     if suffix in PYTHON_EXTENSIONS:
@@ -277,14 +330,13 @@ def scan_file(path: Path, result: ScanResult):
 
 
 def scan_directory(root: Path, result: ScanResult):
-    for entry in root.rglob("*"):
-        if entry.is_dir():
-            if entry.name in SKIP_DIRS:
-                continue
-        elif entry.is_file():
-            if any(part in SKIP_DIRS for part in entry.parts):
-                continue
-            scan_file(entry, result)
+    # Fix #1 + #6 + #10: os.walk with directory pruning avoids traversing skip
+    # dirs entirely, and followlinks=False prevents symlink loops / escapes
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        # Prune in-place so os.walk never descends into skip dirs
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for filename in filenames:
+            scan_file(Path(dirpath) / filename, result)
 
 
 # ---------------------------------------------------------------------------
@@ -376,9 +428,12 @@ def main():
     )
     args = parser.parse_args()
 
-    result = ScanResult()
-    severity_order = [SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW, SEVERITY_INFO]
-    min_idx = severity_order.index(args.min_severity)
+    # Fix #12: clear naming — severity_threshold is the inclusive upper index
+    # (lower index = more severe; threshold=0 means CRITICAL-only)
+    severity_threshold = _SEVERITY_ORDER[args.min_severity]
+
+    # Fix #13: pass threshold into ScanResult so add() filters at insertion time
+    result = ScanResult(severity_threshold=severity_threshold)
 
     for raw_path in args.paths:
         p = Path(raw_path)
@@ -389,12 +444,6 @@ def main():
         else:
             print(f"Warning: {raw_path} does not exist", file=sys.stderr)
 
-    # Filter by min severity
-    result.findings = [
-        f for f in result.findings
-        if severity_order.index(f.severity) <= min_idx
-    ]
-
     if args.format == "json":
         print(report_json(result))
     else:
@@ -402,9 +451,9 @@ def main():
 
     # Exit code
     if args.fail_on:
-        fail_idx = severity_order.index(args.fail_on)
+        fail_threshold = _SEVERITY_ORDER[args.fail_on]
         for f in result.findings:
-            if severity_order.index(f.severity) <= fail_idx:
+            if _SEVERITY_ORDER.get(f.severity, 99) <= fail_threshold:
                 sys.exit(1)
 
 

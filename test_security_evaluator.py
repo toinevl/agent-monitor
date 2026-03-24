@@ -28,11 +28,11 @@ from security_evaluator import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _parse_and_visit(source: str) -> ScanResult:
+def _parse_and_visit(source: str, filepath: str = "<test>") -> ScanResult:
     result = ScanResult()
     lines = source.splitlines()
     tree = ast.parse(textwrap.dedent(source))
-    visitor = PythonASTVisitor("<test>", lines, result)
+    visitor = PythonASTVisitor(filepath, lines, result)
     visitor.visit(tree)
     return result
 
@@ -40,7 +40,8 @@ def _parse_and_visit(source: str) -> ScanResult:
 def _text_scan(source: str) -> ScanResult:
     result = ScanResult()
     lines = source.splitlines()
-    scan_text_rules("<test>", lines, result)
+    # Fix #3: pass text directly (matches updated scan_text_rules signature)
+    scan_text_rules("<test>", source, lines, result)
     return result
 
 
@@ -91,9 +92,18 @@ class TestUnsafeDeserialization(unittest.TestCase):
 
 
 class TestAssertSecurity(unittest.TestCase):
-    def test_assert_flagged(self):
-        result = _parse_and_visit("assert user_is_admin()")
+    def test_assert_flagged_in_production_code(self):
+        result = _parse_and_visit("assert user_is_admin()", filepath="app/auth.py")
         self.assertIn("SEC050", _rule_ids(result))
+
+    def test_assert_not_flagged_in_test_file(self):
+        # Fix #8: asserts inside test files should not produce SEC050
+        result = _parse_and_visit("assert user_is_admin()", filepath="tests/test_auth.py")
+        self.assertNotIn("SEC050", _rule_ids(result))
+
+    def test_assert_not_flagged_in_test_prefix_file(self):
+        result = _parse_and_visit("assert user_is_admin()", filepath="test_auth.py")
+        self.assertNotIn("SEC050", _rule_ids(result))
 
 
 # ---------------------------------------------------------------------------
@@ -151,13 +161,14 @@ class TestSQLInjection(unittest.TestCase):
 
 class TestFileScan(unittest.TestCase):
     def _write_temp(self, content: str, suffix: str = ".py") -> Path:
-        fd, path = tempfile.mkstemp(suffix=suffix)
+        fd, path_str = tempfile.mkstemp(suffix=suffix)
+        path = Path(path_str)
         with os.fdopen(fd, "w") as f:
             f.write(content)
-        return Path(path)
-
-    def tearDown(self):
-        pass  # temp files cleaned by OS
+        # Fix #14: register cleanup immediately so files are always removed,
+        # even if the test raises before reaching a manual unlink()
+        self.addCleanup(path.unlink, missing_ok=True)
+        return path
 
     def test_py_file_scanned(self):
         p = self._write_temp("eval(x)\n")
@@ -165,14 +176,12 @@ class TestFileScan(unittest.TestCase):
         scan_file(p, result)
         self.assertEqual(result.files_scanned, 1)
         self.assertIn("SEC001", _rule_ids(result))
-        p.unlink()
 
     def test_unsupported_extension_skipped(self):
         p = self._write_temp("eval(x)\n", suffix=".xyz")
         result = ScanResult()
         scan_file(p, result)
         self.assertEqual(result.files_scanned, 0)
-        p.unlink()
 
     def test_directory_scan(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -193,6 +202,27 @@ class TestFileScan(unittest.TestCase):
             result = ScanResult()
             scan_directory(Path(tmpdir), result)
             self.assertEqual(result.files_scanned, 0)
+
+    def test_oversized_file_skipped(self):
+        # Fix #5: files over MAX_FILE_BYTES should be silently skipped
+        from security_evaluator import MAX_FILE_BYTES
+        p = self._write_temp("eval(x)\n")
+        # Patch stat to report a file larger than the limit
+        import unittest.mock as mock
+        fake_stat = mock.MagicMock()
+        fake_stat.st_size = MAX_FILE_BYTES + 1
+        with mock.patch.object(Path, "stat", return_value=fake_stat):
+            result = ScanResult()
+            scan_file(p, result)
+            self.assertEqual(result.files_scanned, 0)
+
+    def test_severity_threshold_filters_early(self):
+        # Fix #13: findings below threshold should never be stored
+        p = self._write_temp("assert True\n")  # SEC050 = LOW
+        from security_evaluator import _SEVERITY_ORDER, SEVERITY_CRITICAL
+        result = ScanResult(severity_threshold=_SEVERITY_ORDER[SEVERITY_CRITICAL])
+        scan_file(p, result)
+        self.assertNotIn("SEC050", _rule_ids(result))
 
 
 # ---------------------------------------------------------------------------
