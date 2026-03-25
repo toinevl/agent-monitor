@@ -1,0 +1,29 @@
+name: Deploy SearXNG to ACA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'searxng-aca/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to ACA
+        working-directory: searxng-aca
+        env:
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+          ACA_ENV: ${{ vars.ACA_ENV }}
+          SEARXNG_SECRET_KEY: ${{ secrets.SEARXNG_SECRET_KEY }}
+        run: ./scripts/deploy.sh
