@@ -104,6 +104,10 @@ if [[ -z "$WORKSPACE" ]]; then
     "$HOME/.openclaw/workspace"
     "/home/node/.openclaw/workspace-1"
     "/home/node/.openclaw/workspace"
+    "/opt/openclaw-state/.openclaw/workspace-1"
+    "/opt/openclaw-state/.openclaw/workspace"
+    "/opt/openclaw/.openclaw/workspace-1"
+    "/opt/openclaw/.openclaw/workspace"
   )
   for candidate in "${CANDIDATES[@]}"; do
     if [[ -d "$candidate" ]]; then
