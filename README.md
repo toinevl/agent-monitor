@@ -68,12 +68,25 @@ BEACON_SECRET=oc-beacon-sk-change-me-in-prod
 
 ## Environment Variables (backend)
 
-| Variable              | Default                          | Description                            |
-|-----------------------|----------------------------------|----------------------------------------|
-| `PORT`                | `3001` (dev) / `8080` (Docker)   | HTTP port                              |
-| `PUSH_SECRET`         | `oc-push-sk-7f3a9d2e1b8c4f6a`   | Auth token for `/api/push` (sessions)  |
-| `BEACON_SECRET`       | `oc-beacon-sk-change-me-in-prod` | Auth token for `/api/beacon`           |
-| `OFFLINE_THRESHOLD_MS`| `600000` (10 min)                | Time before instance is marked offline |
+| Variable                          | Default                          | Description                                        |
+|-----------------------------------|----------------------------------|----------------------------------------------------|
+| `PORT`                            | `3001` (dev) / `8080` (Docker)   | HTTP port                                          |
+| `PUSH_SECRET`                     | `oc-push-sk-7f3a9d2e1b8c4f6a`   | Auth token for `/api/push` (sessions)              |
+| `BEACON_SECRET`                   | `oc-beacon-sk-change-me-in-prod` | Auth token for `/api/beacon`                       |
+| `AZURE_STORAGE_CONNECTION_STRING` | _(unset = local JSON fallback)_  | Azure Storage connection string for beacon data    |
+| `OFFLINE_THRESHOLD_MS`            | `600000` (10 min)                | Time before instance is marked offline             |
+
+### Setting up Azure Table Storage
+
+1. Create a Storage Account in Azure (Standard LRS is fine)
+2. Copy the connection string from **Access keys** in the Azure Portal
+3. Set it as an environment variable in your Container App:
+   ```
+   AZURE_STORAGE_CONNECTION_STRING = DefaultEndpointsProtocol=https;AccountName=...
+   ```
+4. The table `OpenClawInstances` is created automatically on first beacon.
+
+Without this env var, the backend falls back to `data/instances.json` (local dev only).
 
 ---
 

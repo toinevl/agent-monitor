@@ -44,8 +44,10 @@ ENV NODE_ENV=production
 # BEACON_SECRET — secret for /api/beacon (instance beacon skill)
 ENV PUSH_SECRET=oc-push-sk-7f3a9d2e1b8c4f6a
 ENV BEACON_SECRET=oc-beacon-sk-change-me-in-prod
+# Set this to your Azure Storage connection string in production:
+# ENV AZURE_STORAGE_CONNECTION_STRING=""
 
-# Persistent data dir (mount a volume here to survive restarts)
+# data/ used only as local dev fallback (Azure Table Storage used in prod)
 RUN mkdir -p /app/data
 
 CMD ["node", "backend/server.js"]

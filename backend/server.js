@@ -85,7 +85,7 @@ app.get('/api/report', (req, res) => {
 // ---------- REST endpoints — instance beacon ----------
 
 // POST /api/beacon — instance registers itself
-app.post('/api/beacon', (req, res) => {
+app.post('/api/beacon', async (req, res) => {
   const auth = req.headers['authorization'] || '';
   if (auth !== `Bearer ${BEACON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -97,36 +97,45 @@ app.post('/api/beacon', (req, res) => {
   }
 
   try {
-    const record = upsertInstance(payload);
-    // Broadcast updated instance list to all WebSocket clients
+    const record = await upsertInstance(payload);
     broadcastInstances();
     res.json({ ok: true, record });
   } catch (err) {
+    console.error('Beacon error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // GET /api/instances — list all known instances
-app.get('/api/instances', (req, res) => {
-  res.json(listInstances());
+app.get('/api/instances', async (req, res) => {
+  try {
+    res.json(await listInstances());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // DELETE /api/instances/:id — remove an instance
-app.delete('/api/instances/:id', (req, res) => {
+app.delete('/api/instances/:id', async (req, res) => {
   const auth = req.headers['authorization'] || '';
   if (auth !== `Bearer ${BEACON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  deleteInstance(req.params.id);
+  await deleteInstance(req.params.id);
   broadcastInstances();
   res.json({ ok: true });
 });
 
-function broadcastInstances() {
-  const msg = JSON.stringify({ type: 'instances', data: listInstances() });
-  wss.clients.forEach(client => {
-    if (client.readyState === 1) client.send(msg);
-  });
+async function broadcastInstances() {
+  try {
+    const instances = await listInstances();
+    const msg = JSON.stringify({ type: 'instances', data: instances });
+    wss.clients.forEach(client => {
+      if (client.readyState === 1) client.send(msg);
+    });
+  } catch (err) {
+    console.error('broadcastInstances error:', err);
+  }
 }
 
 // Serve frontend static files in production
@@ -145,7 +154,7 @@ if (existsSync(distPath)) {
 
 // ---------- WebSocket ----------
 
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
   console.log('Client connected');
 
   // Send current agent session state immediately on connect
@@ -156,7 +165,12 @@ wss.on('connection', (ws) => {
   }
 
   // Also send current instances on connect
-  ws.send(JSON.stringify({ type: 'instances', data: listInstances() }));
+  try {
+    const instances = await listInstances();
+    ws.send(JSON.stringify({ type: 'instances', data: instances }));
+  } catch (err) {
+    console.error('Error sending instances on connect:', err);
+  }
 
   ws.on('close', () => console.log('Client disconnected'));
 });
