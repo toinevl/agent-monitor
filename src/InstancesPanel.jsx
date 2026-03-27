@@ -41,6 +41,8 @@ function InstanceCard({ inst }) {
       display: 'flex',
       flexDirection: 'column',
       gap: 10,
+      minWidth: 0,
+      overflow: 'hidden',
     }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -77,6 +79,7 @@ function InstanceCard({ inst }) {
         fontSize: 12,
         color: '#94a3b8',
         minWidth: 0,
+        overflow: 'hidden',
       }}>
         {inst.label && (
           <MetaRow icon="🏷️" label="Label" value={inst.label} />
@@ -136,16 +139,16 @@ function InstanceCard({ inst }) {
 function MetaRow({ icon, label, value, span }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'baseline', gap: 6,
+      display: 'flex', alignItems: 'baseline', gap: 4,
       gridColumn: span ? '1 / -1' : undefined,
-      minWidth: 0,
+      minWidth: 0, overflow: 'hidden',
     }}>
-      <span style={{ fontSize: 13, flexShrink: 0 }}>{icon}</span>
-      <span style={{ color: '#475569', flexShrink: 0, minWidth: 70 }}>{label}:</span>
+      <span style={{ fontSize: 12, flexShrink: 0 }}>{icon}</span>
+      <span style={{ color: '#475569', flexShrink: 0, whiteSpace: 'nowrap' }}>{label}:</span>
       <span style={{
         color: '#cbd5e1', fontWeight: 500,
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        flex: 1, minWidth: 0,
+        minWidth: 0, flex: 1,
       }} title={String(value)}>
         {String(value)}
       </span>
@@ -196,7 +199,7 @@ export default function InstancesPanel({ instances }) {
         overflowY: 'auto',
         padding: 20,
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 420px))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
         gap: 16,
         alignContent: 'start',
       }}>
