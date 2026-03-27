@@ -43,16 +43,29 @@ function InstanceCard({ inst }) {
       gap: 10,
     }}>
       {/* Header row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
         <span style={{
           width: 8, height: 8, borderRadius: '50%',
           background: statusColor,
           boxShadow: online ? `0 0 6px ${statusColor}` : 'none',
           flexShrink: 0,
         }} />
-        <span style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9', flex: 1 }}>
-          {inst.instanceId}
-        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontWeight: 700, fontSize: 15, color: '#f1f5f9',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }} title={inst.label || inst.instanceId}>
+            {inst.label || inst.instanceId}
+          </div>
+          {inst.label && (
+            <div style={{
+              fontSize: 11, color: '#475569',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              {inst.instanceId}
+            </div>
+          )}
+        </div>
         <Badge color={statusColor}>{online ? 'online' : 'offline'}</Badge>
       </div>
 
@@ -60,9 +73,10 @@ function InstanceCard({ inst }) {
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr',
-        gap: '6px 16px',
+        gap: '6px 12px',
         fontSize: 12,
         color: '#94a3b8',
+        minWidth: 0,
       }}>
         {inst.label && (
           <MetaRow icon="🏷️" label="Label" value={inst.label} />
@@ -122,12 +136,17 @@ function InstanceCard({ inst }) {
 function MetaRow({ icon, label, value, span }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 6,
+      display: 'flex', alignItems: 'baseline', gap: 6,
       gridColumn: span ? '1 / -1' : undefined,
+      minWidth: 0,
     }}>
-      <span style={{ fontSize: 13 }}>{icon}</span>
-      <span style={{ color: '#475569', minWidth: 80 }}>{label}:</span>
-      <span style={{ color: '#cbd5e1', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span style={{ fontSize: 13, flexShrink: 0 }}>{icon}</span>
+      <span style={{ color: '#475569', flexShrink: 0, minWidth: 70 }}>{label}:</span>
+      <span style={{
+        color: '#cbd5e1', fontWeight: 500,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        flex: 1, minWidth: 0,
+      }} title={String(value)}>
         {String(value)}
       </span>
     </div>
@@ -177,7 +196,7 @@ export default function InstancesPanel({ instances }) {
         overflowY: 'auto',
         padding: 20,
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 420px))',
         gap: 16,
         alignContent: 'start',
       }}>
