@@ -5,8 +5,11 @@ import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { dirname } from 'path';
 
+import { upsertInstance, listInstances, deleteInstance } from './instances.js';
+
 const PORT = process.env.PORT || 3001;
-const PUSH_SECRET = 'oc-push-sk-7f3a9d2e1b8c4f6a';
+const PUSH_SECRET   = process.env.PUSH_SECRET   || 'oc-push-sk-7f3a9d2e1b8c4f6a';
+const BEACON_SECRET = process.env.BEACON_SECRET  || 'oc-beacon-sk-change-me-in-prod';
 
 const app = express();
 app.use(cors());
@@ -15,11 +18,11 @@ app.use(express.json());
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
 
-// ---------- In-memory state ----------
+// ---------- In-memory state (agent session monitor) ----------
 
 let pushedState = null; // { agents, edges, pushedAt }
 
-// ---------- REST endpoints ----------
+// ---------- REST endpoints — agent session monitor ----------
 
 // POST /api/push — receive state from local pusher
 app.post('/api/push', (req, res) => {
@@ -79,6 +82,53 @@ app.get('/api/report', (req, res) => {
   }
 });
 
+// ---------- REST endpoints — instance beacon ----------
+
+// POST /api/beacon — instance registers itself
+app.post('/api/beacon', (req, res) => {
+  const auth = req.headers['authorization'] || '';
+  if (auth !== `Bearer ${BEACON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const payload = req.body;
+  if (!payload || !payload.instanceId) {
+    return res.status(400).json({ error: 'Missing instanceId in body' });
+  }
+
+  try {
+    const record = upsertInstance(payload);
+    // Broadcast updated instance list to all WebSocket clients
+    broadcastInstances();
+    res.json({ ok: true, record });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/instances — list all known instances
+app.get('/api/instances', (req, res) => {
+  res.json(listInstances());
+});
+
+// DELETE /api/instances/:id — remove an instance
+app.delete('/api/instances/:id', (req, res) => {
+  const auth = req.headers['authorization'] || '';
+  if (auth !== `Bearer ${BEACON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  deleteInstance(req.params.id);
+  broadcastInstances();
+  res.json({ ok: true });
+});
+
+function broadcastInstances() {
+  const msg = JSON.stringify({ type: 'instances', data: listInstances() });
+  wss.clients.forEach(client => {
+    if (client.readyState === 1) client.send(msg);
+  });
+}
+
 // Serve frontend static files in production
 import { join as pathJoin } from 'path';
 import { fileURLToPath as pathFileUrl } from 'url';
@@ -98,12 +148,15 @@ if (existsSync(distPath)) {
 wss.on('connection', (ws) => {
   console.log('Client connected');
 
-  // Send current state immediately on connect
+  // Send current agent session state immediately on connect
   if (pushedState) {
     ws.send(JSON.stringify({ type: 'state', data: pushedState }));
   } else {
     ws.send(JSON.stringify({ type: 'state', data: { agents: [], edges: [], pushedAt: null } }));
   }
+
+  // Also send current instances on connect
+  ws.send(JSON.stringify({ type: 'instances', data: listInstances() }));
 
   ws.on('close', () => console.log('Client disconnected'));
 });
@@ -113,5 +166,6 @@ wss.on('connection', (ws) => {
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`Agent Monitor backend running on http://0.0.0.0:${PORT}`);
   console.log(`WebSocket: ws://0.0.0.0:${PORT}`);
-  console.log(`Push endpoint: POST /api/push (bearer auth required)`);
+  console.log(`Push endpoint:   POST /api/push   (Bearer PUSH_SECRET)`);
+  console.log(`Beacon endpoint: POST /api/beacon (Bearer BEACON_SECRET)`);
 });

@@ -9,8 +9,9 @@ const BACKEND_WS = import.meta.env.VITE_BACKEND_WS ||
     : 'ws://localhost:3001');
 
 export function useAgentState() {
-  const [agents, setAgents] = useState([]);
-  const [edges,  setEdges]  = useState([]);
+  const [agents,    setAgents]    = useState([]);
+  const [edges,     setEdges]     = useState([]);
+  const [instances, setInstances] = useState([]);
   const [connected, setConnected] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const wsRef = useRef(null);
@@ -18,14 +19,19 @@ export function useAgentState() {
   function applyState(data) {
     setAgents(data.agents || []);
     setEdges(data.edges   || []);
-    setLastUpdated(new Date(data.polledAt));
+    setLastUpdated(new Date(data.polledAt || data.pushedAt || Date.now()));
   }
 
   useEffect(() => {
-    // Initial fetch via HTTP
+    // Initial HTTP fetches
     fetch(`${BACKEND_HTTP}/api/state`)
       .then(r => r.json())
       .then(applyState)
+      .catch(console.error);
+
+    fetch(`${BACKEND_HTTP}/api/instances`)
+      .then(r => r.json())
+      .then(setInstances)
       .catch(console.error);
 
     // Live updates via WebSocket
@@ -42,7 +48,8 @@ export function useAgentState() {
       ws.onmessage = (evt) => {
         try {
           const msg = JSON.parse(evt.data);
-          if (msg.type === 'state') applyState(msg.data);
+          if (msg.type === 'state')     applyState(msg.data);
+          if (msg.type === 'instances') setInstances(msg.data || []);
         } catch {}
       };
     }
@@ -51,5 +58,5 @@ export function useAgentState() {
     return () => wsRef.current?.close();
   }, []);
 
-  return { agents, edges, connected, lastUpdated };
+  return { agents, edges, instances, connected, lastUpdated };
 }

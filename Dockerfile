@@ -39,5 +39,13 @@ EXPOSE 8080
 
 ENV PORT=8080
 ENV NODE_ENV=production
+# Override these via environment variables at runtime:
+# PUSH_SECRET   — secret for /api/push  (local pusher)
+# BEACON_SECRET — secret for /api/beacon (instance beacon skill)
+ENV PUSH_SECRET=oc-push-sk-7f3a9d2e1b8c4f6a
+ENV BEACON_SECRET=oc-beacon-sk-change-me-in-prod
+
+# Persistent data dir (mount a volume here to survive restarts)
+RUN mkdir -p /app/data
 
 CMD ["node", "backend/server.js"]

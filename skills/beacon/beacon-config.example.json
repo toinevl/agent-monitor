@@ -1,0 +1,6 @@
+{
+  "instanceId":   "my-instance",
+  "label":        "My OpenClaw Instance",
+  "centralUrl":   "https://agent-monitor.example.com",
+  "beaconSecret": "oc-beacon-sk-change-me-in-prod"
+}

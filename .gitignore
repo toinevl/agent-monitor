@@ -6,3 +6,9 @@ dist/
 *.log
 .pnpm-store/
 package-lock.json
+
+# Beacon skill live config (contains secrets)
+skills/beacon/beacon-config.json
+
+# Instance data store (runtime, not committed)
+data/
