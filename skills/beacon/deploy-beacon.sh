@@ -131,7 +131,7 @@ header "📦 Installing beacon skill..."
 mkdir -p "$SKILL_DIR"
 
 # Download SKILL.md from GitHub (or copy from local if running from repo)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/SKILL.md" ]]; then
   cp "$SCRIPT_DIR/SKILL.md" "$SKILL_DIR/SKILL.md"
   info "Copied SKILL.md from local repo"
@@ -218,30 +218,39 @@ PYEOF
     CHANNEL="$(echo "$PARSED" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('channel',''))")"
   fi
 
-  # Count plugins
-  PLUGINS_LOADED="$(openclaw plugins list 2>/dev/null | grep -c '│ loaded' || echo 0)"
-  PLUGINS_TOTAL="$(openclaw plugins list 2>/dev/null | grep -c '│' || echo 0)"
+  # Count plugins (strip whitespace to avoid newlines in substitution)
+  PLUGINS_LOADED="$(openclaw plugins list 2>/dev/null | grep -c '│ loaded' || true)"
+  PLUGINS_LOADED="${PLUGINS_LOADED//[^0-9]/}"
+  PLUGINS_LOADED="${PLUGINS_LOADED:-0}"
+  PLUGINS_TOTAL="$(openclaw plugins list 2>/dev/null | grep -c '│' || true)"
+  PLUGINS_TOTAL="${PLUGINS_TOTAL//[^0-9]/}"
+  PLUGINS_TOTAL="${PLUGINS_TOTAL:-0}"
 
-  PAYLOAD="$(python3 -c "
+  # Build payload via a temp file to avoid shell quoting / newline issues
+  PAYLOAD_FILE="$(mktemp)"
+  python3 - <<PYEOF > "$PAYLOAD_FILE"
 import json
-print(json.dumps({
-    'instanceId':     '$INSTANCE_ID',
-    'label':          '$LABEL',
-    'version':        '$OC_VERSION',
-    'model':          '$MODEL',
-    'host':           '$HOST_INFO',
-    'channel':        '$CHANNEL',
-    'agents':         $AGENTS_JSON,
-    'activeSessions': 1,
-    'plugins':        {'loaded': $PLUGINS_LOADED, 'total': $PLUGINS_TOTAL},
-    'uptime':         $UPTIME_SEC
-}))")"
+payload = {
+    "instanceId":     "$INSTANCE_ID",
+    "label":          "$LABEL",
+    "version":        "$OC_VERSION",
+    "model":          "$MODEL",
+    "host":           "$HOST_INFO",
+    "channel":        "$CHANNEL",
+    "agents":         $AGENTS_JSON,
+    "activeSessions": 1,
+    "plugins":        {"loaded": $PLUGINS_LOADED, "total": $PLUGINS_TOTAL},
+    "uptime":         $UPTIME_SEC,
+}
+print(json.dumps(payload))
+PYEOF
 
   RESPONSE="$(curl -s -w "\n%{http_code}" -X POST \
     -H "Authorization: Bearer $BEACON_SECRET" \
     -H "Content-Type: application/json" \
-    -d "$PAYLOAD" \
+    -d "@$PAYLOAD_FILE" \
     "$CENTRAL_URL/api/beacon")"
+  rm -f "$PAYLOAD_FILE"
 
   HTTP_BODY="$(echo "$RESPONSE" | head -n -1)"
   HTTP_CODE="$(echo "$RESPONSE" | tail -n 1)"
