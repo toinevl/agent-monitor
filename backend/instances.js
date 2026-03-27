@@ -57,6 +57,10 @@ function fileSave(store) {
 
 // ---------- Serialization helpers ----------
 
+// Fields that Azure Tables SDK might misinterpret (dates, numbers-as-strings)
+// We store them with a "str_" prefix to force string type
+const FORCE_STRING = ['version'];
+
 /** Flatten complex fields to JSON strings for Table Storage */
 function toEntity(payload) {
   const entity = {
@@ -66,19 +70,33 @@ function toEntity(payload) {
   };
   for (const [k, v] of Object.entries(payload)) {
     if (k === 'instanceId') continue; // stored as rowKey
-    entity[k] = (typeof v === 'object' && v !== null) ? JSON.stringify(v) : v;
+    if (typeof v === 'object' && v !== null) {
+      entity[k] = JSON.stringify(v);
+    } else if (FORCE_STRING.includes(k)) {
+      entity[`str_${k}`] = String(v); // store as prefixed to avoid type coercion
+    } else {
+      entity[k] = v;
+    }
   }
   return entity;
 }
 
 /** Reconstruct payload from a Table Storage entity */
 function fromEntity(entity) {
-  const COMPLEX = ['agents', 'plugins'];
+  const COMPLEX  = ['agents', 'plugins'];
+  const INTEGERS = ['lastSeenAt', 'uptime', 'activeSessions'];
   const record = { instanceId: entity.rowKey };
   for (const [k, v] of Object.entries(entity)) {
     if (['partitionKey', 'rowKey', 'etag', 'timestamp'].includes(k)) continue;
+    // Unpack prefixed string fields
+    if (k.startsWith('str_')) {
+      record[k.slice(4)] = String(v);
+      continue;
+    }
     if (COMPLEX.includes(k) && typeof v === 'string') {
       try { record[k] = JSON.parse(v); } catch { record[k] = v; }
+    } else if (INTEGERS.includes(k)) {
+      record[k] = typeof v === 'number' ? v : parseInt(v, 10) || 0;
     } else {
       record[k] = v;
     }
