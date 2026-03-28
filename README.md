@@ -51,7 +51,7 @@ Create `skills/beacon/beacon-config.json`:
 ### 3. Add to HEARTBEAT.md
 
 ```
-- Run the beacon skill: report this instance to the central dashboard
+- Run the agent-monitor-beacon skill: report this instance to the central dashboard
 ```
 
 That's it. The agent will beacon every heartbeat cycle.

@@ -1,4 +1,4 @@
-# Beacon Skill
+# Agent Monitor Beacon Skill
 
 Reports OpenClaw instance details to the central Agent Monitor dashboard.
 
