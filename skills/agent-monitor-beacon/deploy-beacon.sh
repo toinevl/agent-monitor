@@ -202,8 +202,9 @@ if $ADD_CRON; then
     --message "Run the agent-monitor-beacon skill: report this instance to the central dashboard" \
     --description "Beacon heartbeat to agent-monitor dashboard" \
     --session isolated \
-    --light-context 2>/dev/null && success "Cron job added (every 15 min, agent $AGENT_ID)" \
-    || warn "Failed to add cron job — add it manually with: openclaw cron add --name agent-monitor-beacon --every 15m --agent $AGENT_ID --message '...' --session isolated --light-context"
+    --light-context \
+    --no-deliver 2>/dev/null && success "Cron job added (every 15 min, agent $AGENT_ID, silent)" \
+    || warn "Failed to add cron job — add it manually with: openclaw cron add --name agent-monitor-beacon --every 15m --agent $AGENT_ID --message '...' --session isolated --light-context --no-deliver"
 fi
 
 # ---------- Fix heartbeat routing ----------
