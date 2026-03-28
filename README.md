@@ -126,9 +126,14 @@ curl -fsSL https://raw.githubusercontent.com/toinevl/agent-monitor/main/skills/a
     --label "Your Instance Name" \
     --url https://your-agent-monitor-url.com \
     --secret your-beacon-secret \
-    --heartbeat \
-    --send-now
+    --all
 ```
+
+`--all` is shorthand for `--heartbeat --cron --fix-heartbeat --send-now`. It:
+- Adds the beacon task to `HEARTBEAT.md`
+- Creates a cron job (every 15 min) so the instance stays online even if heartbeats are delayed
+- Fixes heartbeat routing to the correct agent
+- Sends an immediate test beacon
 
 Run without flags for interactive mode (prompts for all values).
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# deploy-beacon.sh — Install the OpenClaw beacon skill on this instance
+# deploy-beacon.sh — Install the OpenClaw agent-monitor-beacon skill
 #
 # Usage:
 #   ./deploy-beacon.sh [OPTIONS]
@@ -11,18 +11,21 @@
 #   -u, --url           URL     Central Agent Monitor URL (required)
 #   -s, --secret        SECRET  Beacon secret (required)
 #   -w, --workspace     PATH    OpenClaw workspace path (default: auto-detect)
-#   -h, --heartbeat             Add beacon to HEARTBEAT.md automatically
-#   --send-now                  Send a test beacon immediately after install
-#   --help                      Show this help
+#   -a, --agent-id      ID      OpenClaw agent id to configure (default: 1)
+#       --heartbeat             Add beacon to HEARTBEAT.md automatically
+#       --cron                  Add a cron job (every 15m) for reliable beaconing
+#       --fix-heartbeat         Fix heartbeat routing to the agent (recommended)
+#       --send-now              Send a test beacon immediately after install
+#       --all                   Shorthand for --heartbeat --cron --fix-heartbeat --send-now
+#       --help                  Show this help
 #
-# Example:
+# Example (recommended — does everything):
 #   ./deploy-beacon.sh \
 #     --instance-id home-pi \
 #     --label "Home Raspberry Pi" \
 #     --url https://agent-monitor.example.com \
-#     --secret oc-beacon-sk-mytoken \
-#     --heartbeat \
-#     --send-now
+#     --secret your-beacon-secret \
+#     --all
 # =============================================================================
 
 set -euo pipefail
@@ -43,19 +46,28 @@ LABEL=""
 CENTRAL_URL=""
 BEACON_SECRET=""
 WORKSPACE=""
+AGENT_ID="1"
 ADD_HEARTBEAT=false
+ADD_CRON=false
+FIX_HEARTBEAT=false
 SEND_NOW=false
 
 # ---------- Parse args ----------
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -i|--instance-id) INSTANCE_ID="$2"; shift 2 ;;
-    -l|--label)       LABEL="$2";        shift 2 ;;
-    -u|--url)         CENTRAL_URL="$2";  shift 2 ;;
-    -s|--secret)      BEACON_SECRET="$2"; shift 2 ;;
-    -w|--workspace)   WORKSPACE="$2";    shift 2 ;;
-    -h|--heartbeat)   ADD_HEARTBEAT=true; shift ;;
-    --send-now)       SEND_NOW=true;     shift ;;
+    -i|--instance-id)  INSTANCE_ID="$2";   shift 2 ;;
+    -l|--label)        LABEL="$2";          shift 2 ;;
+    -u|--url)          CENTRAL_URL="$2";    shift 2 ;;
+    -s|--secret)       BEACON_SECRET="$2";  shift 2 ;;
+    -w|--workspace)    WORKSPACE="$2";      shift 2 ;;
+    -a|--agent-id)     AGENT_ID="$2";       shift 2 ;;
+    --heartbeat)       ADD_HEARTBEAT=true;  shift ;;
+    --cron)            ADD_CRON=true;       shift ;;
+    --fix-heartbeat)   FIX_HEARTBEAT=true;  shift ;;
+    --send-now)        SEND_NOW=true;       shift ;;
+    --all)
+      ADD_HEARTBEAT=true; ADD_CRON=true; FIX_HEARTBEAT=true; SEND_NOW=true
+      shift ;;
     --help)
       sed -n '/^# Usage/,/^# ====/p' "$0" | sed 's/^# \?//'
       exit 0 ;;
@@ -67,9 +79,7 @@ done
 if [[ -z "$INSTANCE_ID" ]]; then
   read -rp "Instance ID (unique slug, e.g. home-pi): " INSTANCE_ID
 fi
-if [[ -z "$INSTANCE_ID" ]]; then
-  error "Instance ID is required."
-fi
+[[ -z "$INSTANCE_ID" ]] && error "Instance ID is required."
 
 if [[ -z "$LABEL" ]]; then
   DEFAULT_LABEL="$(hostname)"
@@ -80,25 +90,19 @@ fi
 if [[ -z "$CENTRAL_URL" ]]; then
   read -rp "Central Agent Monitor URL: " CENTRAL_URL
 fi
-if [[ -z "$CENTRAL_URL" ]]; then
-  error "Central URL is required."
-fi
-# Strip trailing slash
+[[ -z "$CENTRAL_URL" ]] && error "Central URL is required."
 CENTRAL_URL="${CENTRAL_URL%/}"
 
 if [[ -z "$BEACON_SECRET" ]]; then
   read -rsp "Beacon secret: " BEACON_SECRET
   echo
 fi
-if [[ -z "$BEACON_SECRET" ]]; then
-  error "Beacon secret is required."
-fi
+[[ -z "$BEACON_SECRET" ]] && error "Beacon secret is required."
 
 # ---------- Find workspace ----------
 header "🔍 Locating OpenClaw workspace..."
 
 if [[ -z "$WORKSPACE" ]]; then
-  # Try common locations
   CANDIDATES=(
     "$HOME/.openclaw/workspace-1"
     "$HOME/.openclaw/workspace"
@@ -118,19 +122,23 @@ if [[ -z "$WORKSPACE" ]]; then
   done
 fi
 
-if [[ -z "$WORKSPACE" || ! -d "$WORKSPACE" ]]; then
+[[ -z "$WORKSPACE" || ! -d "$WORKSPACE" ]] && \
   error "Could not find OpenClaw workspace. Pass --workspace PATH explicitly."
-fi
 
 SKILL_DIR="$WORKSPACE/skills/agent-monitor-beacon"
 HEARTBEAT_FILE="$WORKSPACE/HEARTBEAT.md"
+
+# ---------- Check openclaw CLI available ----------
+if ! command -v openclaw &>/dev/null; then
+  warn "openclaw CLI not found in PATH — skipping cron/heartbeat steps."
+  ADD_CRON=false; FIX_HEARTBEAT=false
+fi
 
 # ---------- Install skill files ----------
 header "📦 Installing beacon skill..."
 
 mkdir -p "$SKILL_DIR"
 
-# Download SKILL.md from GitHub (or copy from local if running from repo)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 if [[ -f "$SCRIPT_DIR/SKILL.md" ]]; then
   cp "$SCRIPT_DIR/SKILL.md" "$SKILL_DIR/SKILL.md"
@@ -152,9 +160,7 @@ success "SKILL.md installed"
 # ---------- Write beacon-config.json ----------
 header "⚙️  Writing beacon-config.json..."
 
-CONFIG_FILE="$SKILL_DIR/beacon-config.json"
-
-cat > "$CONFIG_FILE" <<EOF
+cat > "$SKILL_DIR/beacon-config.json" <<EOF
 {
   "instanceId":   "$INSTANCE_ID",
   "label":        "$LABEL",
@@ -163,41 +169,82 @@ cat > "$CONFIG_FILE" <<EOF
 }
 EOF
 
-success "Config written to $CONFIG_FILE"
+success "Config written to $SKILL_DIR/beacon-config.json"
 
-# ---------- Optionally update HEARTBEAT.md ----------
+# ---------- Update HEARTBEAT.md ----------
 if $ADD_HEARTBEAT; then
   header "💓 Updating HEARTBEAT.md..."
-
   BEACON_LINE="- Run the agent-monitor-beacon skill: report this instance to the central dashboard"
-
   if [[ -f "$HEARTBEAT_FILE" ]] && grep -qF "agent-monitor-beacon skill" "$HEARTBEAT_FILE"; then
     warn "Beacon entry already present in HEARTBEAT.md — skipping"
   else
-    if [[ ! -f "$HEARTBEAT_FILE" ]]; then
-      echo "# HEARTBEAT.md" > "$HEARTBEAT_FILE"
-      echo "" >> "$HEARTBEAT_FILE"
-    fi
+    [[ ! -f "$HEARTBEAT_FILE" ]] && { echo "# HEARTBEAT.md"; echo ""; } > "$HEARTBEAT_FILE"
     echo "" >> "$HEARTBEAT_FILE"
     echo "$BEACON_LINE" >> "$HEARTBEAT_FILE"
     success "Added beacon task to HEARTBEAT.md"
   fi
 fi
 
-# ---------- Optionally send a test beacon ----------
+# ---------- Add cron job ----------
+if $ADD_CRON; then
+  header "⏱️  Setting up cron job (every 15 min)..."
+  # Remove existing job with same name to avoid duplicates
+  EXISTING_ID="$(openclaw cron list --json 2>/dev/null \
+    | python3 -c "import sys,json; jobs=json.load(sys.stdin); \
+      print(next((j['id'] for j in jobs if j.get('name')=='agent-monitor-beacon'), ''))" 2>/dev/null || true)"
+  if [[ -n "$EXISTING_ID" ]]; then
+    openclaw cron rm "$EXISTING_ID" 2>/dev/null && info "Removed existing cron job $EXISTING_ID"
+  fi
+  openclaw cron add \
+    --name "agent-monitor-beacon" \
+    --every 15m \
+    --agent "$AGENT_ID" \
+    --message "Run the agent-monitor-beacon skill: report this instance to the central dashboard" \
+    --description "Beacon heartbeat to agent-monitor dashboard" \
+    --session isolated \
+    --light-context 2>/dev/null && success "Cron job added (every 15 min, agent $AGENT_ID)" \
+    || warn "Failed to add cron job — add it manually with: openclaw cron add --name agent-monitor-beacon --every 15m --agent $AGENT_ID --message '...' --session isolated --light-context"
+fi
+
+# ---------- Fix heartbeat routing ----------
+if $FIX_HEARTBEAT; then
+  header "🔧 Fixing heartbeat routing to agent $AGENT_ID..."
+  # Find the index of the agent in agents.list
+  AGENT_IDX="$(openclaw config get agents.list 2>/dev/null \
+    | python3 -c "
+import sys, json
+agents = json.load(sys.stdin)
+for i, a in enumerate(agents):
+    if str(a.get('id','')) == '$AGENT_ID':
+        print(i)
+        break
+" 2>/dev/null || true)"
+
+  if [[ -z "$AGENT_IDX" ]]; then
+    warn "Could not find agent '$AGENT_ID' in agents.list — skipping heartbeat fix."
+  else
+    openclaw config set "agents.list[$AGENT_IDX].heartbeat.every" "30m" 2>/dev/null
+    openclaw config set "agents.list[$AGENT_IDX].heartbeat.target" "telegram" 2>/dev/null
+    openclaw config set "agents.list[$AGENT_IDX].heartbeat.lightContext" true 2>/dev/null
+    openclaw config set "agents.list[$AGENT_IDX].heartbeat.isolatedSession" true 2>/dev/null
+    success "Heartbeat config set for agent $AGENT_ID (every 30m, telegram, isolated)"
+    info "Restarting gateway to apply heartbeat config..."
+    openclaw gateway restart 2>/dev/null &
+    sleep 3
+    success "Gateway restarted"
+  fi
+fi
+
+# ---------- Send test beacon ----------
 if $SEND_NOW; then
   header "📡 Sending test beacon..."
 
-  # Collect instance info
   OC_VERSION="$(openclaw --version 2>/dev/null | grep -oP '\d{4}\.\d+\.\d+[^\s]*' | head -1 || echo unknown)"
-  UPTIME_SEC="$(cat /proc/uptime 2>/dev/null | awk '{print int($1)}' || echo 0)"
+  UPTIME_SEC="$(awk '{print int($1)}' /proc/uptime 2>/dev/null || echo 0)"
   HOST_INFO="$(uname -ms 2>/dev/null || echo unknown)"
 
-  # Parse agents + model + channel from openclaw.json
   OC_CONFIG="$HOME/.openclaw/openclaw.json"
-  AGENTS_JSON="[]"
-  MODEL=""
-  CHANNEL=""
+  AGENTS_JSON="[]"; MODEL=""; CHANNEL=""
   if [[ -f "$OC_CONFIG" ]] && command -v python3 &>/dev/null; then
     PARSED="$(python3 - "$OC_CONFIG" <<'PYEOF'
 import json, sys
@@ -218,15 +265,6 @@ PYEOF
     CHANNEL="$(echo "$PARSED" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('channel',''))")"
   fi
 
-  # Count plugins (strip whitespace to avoid newlines in substitution)
-  PLUGINS_LOADED="$(openclaw plugins list 2>/dev/null | grep -c '│ loaded' || true)"
-  PLUGINS_LOADED="${PLUGINS_LOADED//[^0-9]/}"
-  PLUGINS_LOADED="${PLUGINS_LOADED:-0}"
-  PLUGINS_TOTAL="$(openclaw plugins list 2>/dev/null | grep -c '│' || true)"
-  PLUGINS_TOTAL="${PLUGINS_TOTAL//[^0-9]/}"
-  PLUGINS_TOTAL="${PLUGINS_TOTAL:-0}"
-
-  # Build payload via a temp file to avoid shell quoting / newline issues
   PAYLOAD_FILE="$(mktemp)"
   python3 - <<PYEOF > "$PAYLOAD_FILE"
 import json
@@ -238,8 +276,8 @@ payload = {
     "host":           "$HOST_INFO",
     "channel":        "$CHANNEL",
     "agents":         $AGENTS_JSON,
-    "activeSessions": 1,
-    "plugins":        {"loaded": $PLUGINS_LOADED, "total": $PLUGINS_TOTAL},
+    "activeSessions": 0,
+    "plugins":        {"loaded": 0, "total": 0},
     "uptime":         $UPTIME_SEC,
 }
 print(json.dumps(payload))
@@ -252,30 +290,25 @@ PYEOF
     "$CENTRAL_URL/api/beacon")"
   rm -f "$PAYLOAD_FILE"
 
-  HTTP_BODY="$(echo "$RESPONSE" | head -n -1)"
-  HTTP_CODE="$(echo "$RESPONSE" | tail -n 1)"
+  HTTP_CODE="$(echo "$RESPONSE" | tail -n1)"
+  HTTP_BODY="$(echo "$RESPONSE" | head -n-1)"
 
   if [[ "$HTTP_CODE" == "200" ]]; then
-    success "Beacon sent! Instance '$INSTANCE_ID' is now visible on the dashboard."
+    success "Beacon sent! '$INSTANCE_ID' is now visible on the dashboard."
   else
     warn "Beacon returned HTTP $HTTP_CODE: $HTTP_BODY"
   fi
 fi
 
 # ---------- Summary ----------
-header "✅ Beacon skill deployed"
+header "✅ Done — beacon skill deployed"
 echo ""
 echo -e "  Instance ID : ${BOLD}$INSTANCE_ID${RESET}"
 echo -e "  Label       : ${BOLD}$LABEL${RESET}"
 echo -e "  Dashboard   : ${CYAN}$CENTRAL_URL${RESET}"
 echo -e "  Skill dir   : $SKILL_DIR"
 echo ""
-if ! $ADD_HEARTBEAT; then
-  echo -e "${YELLOW}Tip:${RESET} Add this line to $HEARTBEAT_FILE to auto-beacon every heartbeat:"
-  echo -e "  - Run the agent-monitor-beacon skill: report this instance to the central dashboard"
-  echo ""
-fi
-if ! $SEND_NOW; then
-  echo -e "${YELLOW}Tip:${RESET} Run with --send-now to send an immediate test beacon."
+if ! $ADD_HEARTBEAT || ! $ADD_CRON || ! $FIX_HEARTBEAT; then
+  echo -e "${YELLOW}Tip:${RESET} Run with ${BOLD}--all${RESET} to also set up cron, fix heartbeat routing, and send a test beacon."
   echo ""
 fi
