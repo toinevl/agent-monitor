@@ -23,13 +23,9 @@ Updates are push-based over WebSocket — no polling, no inbound connectivity re
 
 ---
 
-## Screenshots
-
-> _Add screenshots here once the UI stabilises._
-
----
-
 ## Architecture
+
+![Architecture](docs/architecture.gif)
 
 ```
 ┌─────────────────────────────────┐
