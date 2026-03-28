@@ -191,8 +191,8 @@ Auth: `Authorization: Bearer <BEACON_SECRET>`
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PORT` | `3001` (dev) / `8080` (Docker) | HTTP port |
-| `PUSH_SECRET` | `oc-push-sk-7f3a9d2e1b8c4f6a` | Auth token for `/api/push` |
-| `BEACON_SECRET` | `oc-beacon-sk-change-me-in-prod` | Auth token for `/api/beacon` |
+| `PUSH_SECRET` | _(required)_ | Auth token for `/api/push` |
+| `BEACON_SECRET` | _(required)_ | Auth token for `/api/beacon` |
 | `AZURE_STORAGE_CONNECTION_STRING` | _(unset = local JSON fallback)_ | Azure Table Storage for beacon data |
 | `OFFLINE_THRESHOLD_MS` | `600000` (10 min) | Time before instance is marked offline |
 
