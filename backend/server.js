@@ -1,6 +1,8 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import cors from 'cors';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
 import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { dirname } from 'path';
@@ -17,8 +19,22 @@ if (!PUSH_SECRET || !BEACON_SECRET) {
 }
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+app.use(helmet());
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:5173'];
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json({ limit: '10kb' }));
+
+const pushLimiter = rateLimit({ windowMs: 60_000, max: 60, standardHeaders: true, legacyHeaders: false });
+const beaconLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false });
 
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
@@ -30,18 +46,21 @@ let pushedState = null; // { agents, edges, pushedAt }
 // ---------- REST endpoints — agent session monitor ----------
 
 // POST /api/push — receive state from local pusher
-app.post('/api/push', (req, res) => {
+app.post('/api/push', pushLimiter, (req, res) => {
   const auth = req.headers['authorization'] || '';
   if (auth !== `Bearer ${PUSH_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const { agents, edges, pushedAt } = req.body;
-  if (!agents || !edges) {
-    return res.status(400).json({ error: 'Missing agents or edges in body' });
+  if (!Array.isArray(agents) || !Array.isArray(edges)) {
+    return res.status(400).json({ error: 'agents and edges must be arrays' });
+  }
+  if (agents.length > 500 || edges.length > 1000) {
+    return res.status(400).json({ error: 'Payload exceeds maximum allowed size' });
   }
 
-  pushedState = { agents, edges, pushedAt: pushedAt || Date.now() };
+  pushedState = { agents, edges, pushedAt: typeof pushedAt === 'number' ? pushedAt : Date.now() };
 
   const msg = JSON.stringify({ type: 'state', data: pushedState });
   wss.clients.forEach(client => {
@@ -90,7 +109,7 @@ app.get('/api/report', (req, res) => {
 // ---------- REST endpoints — instance beacon ----------
 
 // POST /api/beacon — instance registers itself
-app.post('/api/beacon', async (req, res) => {
+app.post('/api/beacon', beaconLimiter, async (req, res) => {
   const auth = req.headers['authorization'] || '';
   if (auth !== `Bearer ${BEACON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' });
