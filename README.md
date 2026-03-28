@@ -136,6 +136,8 @@ curl -fsSL https://raw.githubusercontent.com/toinevl/agent-monitor/main/skills/a
 
 Run without flags for interactive mode (prompts for all values).
 
+See [`skills/agent-monitor-beacon/deploy-beacon.sh`](skills/agent-monitor-beacon/deploy-beacon.sh) for the full install script.
+
 **Manual install:**
 
 1. Copy `skills/agent-monitor-beacon/` to the `skills/` folder of the OpenClaw instance
