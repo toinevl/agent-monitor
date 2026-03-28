@@ -8,8 +8,13 @@ import { dirname } from 'path';
 import { upsertInstance, listInstances, deleteInstance } from './instances.js';
 
 const PORT = process.env.PORT || 3001;
-const PUSH_SECRET   = process.env.PUSH_SECRET   || 'oc-push-sk-7f3a9d2e1b8c4f6a';
-const BEACON_SECRET = process.env.BEACON_SECRET  || 'oc-beacon-sk-change-me-in-prod';
+const PUSH_SECRET   = process.env.PUSH_SECRET;
+const BEACON_SECRET = process.env.BEACON_SECRET;
+
+if (!PUSH_SECRET || !BEACON_SECRET) {
+  console.error('FATAL: PUSH_SECRET and BEACON_SECRET environment variables must be set');
+  process.exit(1);
+}
 
 const app = express();
 app.use(cors());

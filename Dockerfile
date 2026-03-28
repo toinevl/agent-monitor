@@ -39,13 +39,10 @@ EXPOSE 8080
 
 ENV PORT=8080
 ENV NODE_ENV=production
-# Override these via environment variables at runtime:
-# PUSH_SECRET   — secret for /api/push  (local pusher)
-# BEACON_SECRET — secret for /api/beacon (instance beacon skill)
-ENV PUSH_SECRET=oc-push-sk-7f3a9d2e1b8c4f6a
-ENV BEACON_SECRET=oc-beacon-sk-change-me-in-prod
-# Set this to your Azure Storage connection string in production:
-# ENV AZURE_STORAGE_CONNECTION_STRING=""
+# Required environment variables — must be set at runtime (e.g. via Azure Container Apps secrets):
+# PUSH_SECRET                    — secret for /api/push  (local pusher)
+# BEACON_SECRET                  — secret for /api/beacon (instance beacon skill)
+# AZURE_STORAGE_CONNECTION_STRING — Azure Table Storage connection string
 
 # data/ used only as local dev fallback (Azure Table Storage used in prod)
 RUN mkdir -p /app/data
