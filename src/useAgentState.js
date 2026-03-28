@@ -48,9 +48,12 @@ export function useAgentState() {
       ws.onmessage = (evt) => {
         try {
           const msg = JSON.parse(evt.data);
-          if (msg.type === 'state')     applyState(msg.data);
-          if (msg.type === 'instances') setInstances(msg.data || []);
-        } catch {}
+          if (!msg || typeof msg.type !== 'string') return;
+          if (msg.type === 'state' && msg.data && typeof msg.data === 'object') applyState(msg.data);
+          if (msg.type === 'instances' && Array.isArray(msg.data)) setInstances(msg.data);
+        } catch (err) {
+          console.error('[ws] Failed to handle message:', err);
+        }
       };
     }
 
