@@ -250,18 +250,38 @@ docker run -p 8080:8080 \
 
 ### Azure Container Apps
 
+Two scripts handle the full Azure deployment:
+
+| Script | Purpose |
+|--------|---------|
+| [`deploy-azure.ps1`](deploy-azure.ps1) | Build, push, and deploy (or update) the Container App |
+| [`add-persistent-storage.ps1`](add-persistent-storage.ps1) | Provision Azure Files and mount at `/app/data` (run once after first deploy) |
+
+**Prerequisites:** Docker Desktop, Azure CLI (`az login`), access to the ACR registry.
+
+**First deploy:**
+
 ```powershell
-./deploy-azure.ps1
+.\deploy-azure.ps1 -BeaconSecret "your-beacon-secret" -PushSecret "your-push-secret"
 ```
 
-After deployment, set secrets in the Azure Portal:  
-**Container App → Settings → Environment variables**
+The script detects whether the Container App exists and runs `create` or `update` accordingly — safe to re-run on every deploy.
 
+**Add persistent storage (recommended, run once):**
+
+```powershell
+.\add-persistent-storage.ps1 -BeaconSecret "your-beacon-secret"
 ```
-BEACON_SECRET=your-secret
-PUSH_SECRET=your-secret
-AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...
+
+This provisions an Azure Files share and mounts it at `/app/data` so beacon data survives container restarts and scale-to-zero events. Without this, beacon data is lost on restart.
+
+**Subsequent deploys** (image update only):
+
+```powershell
+.\deploy-azure.ps1
 ```
+
+> **Note:** `min-replicas=0` — the app scales to zero when idle, minimising cost. Cold start is a few seconds.
 
 ---
 

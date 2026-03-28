@@ -1,18 +1,29 @@
 # add-persistent-storage.ps1
-# One-time script to add Azure Files persistent storage to the existing
-# agent-monitor Container App so instance beacons survive restarts/scale events.
+# Provisions Azure Files and mounts it at /app/data in the Container App.
+# Run this once after initial deploy to make beacon data survive restarts and scale events.
 #
-# Run from your Windows machine with Azure CLI logged in.
-# Prerequisites: az login, correct subscription set
+# Prerequisites:
+#   - az login, correct subscription set
+#   - agent-monitor Container App already deployed (run deploy-azure.ps1 first)
+#
+# Usage:
+#   .\add-persistent-storage.ps1
+#   .\add-persistent-storage.ps1 -BeaconSecret "your-secret"
 
+param(
+    [string]$BeaconSecret = "oc-beacon-sk-change-me-in-prod"
+)
+
+# ---------- Config (must match deploy-azure.ps1) ----------
 $RG           = "rg-agent-monitor"
 $ENV_NAME     = "cae-agent-monitor"
 $APP_NAME     = "agent-monitor"
 $LOCATION     = "northeurope"
-$STORAGE_NAME = "agentmonitordata"    # must be globally unique, lowercase, 3-24 chars
+$STORAGE_NAME = "agentmonitordata"    # globally unique, lowercase, 3-24 chars
 $SHARE_NAME   = "instances-data"
-$STORAGE_MOUNT_NAME = "instancesdata" # name used inside Container Apps env
+$MOUNT_NAME   = "instancesdata"       # name used inside Container Apps environment
 
+# ---------- Step 1: Create Storage Account ----------
 Write-Host "=== Step 1: Create Storage Account ===" -ForegroundColor Cyan
 az storage account create `
   --name $STORAGE_NAME `
@@ -21,11 +32,13 @@ az storage account create `
   --sku Standard_LRS `
   --kind StorageV2
 
+# ---------- Step 2: Create File Share ----------
 Write-Host "`n=== Step 2: Create File Share ===" -ForegroundColor Cyan
 az storage share create `
   --name $SHARE_NAME `
   --account-name $STORAGE_NAME
 
+# ---------- Step 3: Get Storage Key ----------
 Write-Host "`n=== Step 3: Get Storage Key ===" -ForegroundColor Cyan
 $STORAGE_KEY = az storage account keys list `
   --account-name $STORAGE_NAME `
@@ -33,25 +46,31 @@ $STORAGE_KEY = az storage account keys list `
   --query "[0].value" `
   --output tsv
 
-Write-Host "`n=== Step 4: Register Azure Files storage in Container Apps environment ===" -ForegroundColor Cyan
+# ---------- Step 4: Register storage in Container Apps environment ----------
+Write-Host "`n=== Step 4: Register storage in Container Apps environment ===" -ForegroundColor Cyan
 az containerapp env storage set `
   --name $ENV_NAME `
   --resource-group $RG `
-  --storage-name $STORAGE_MOUNT_NAME `
+  --storage-name $MOUNT_NAME `
   --azure-file-account-name $STORAGE_NAME `
   --azure-file-account-key $STORAGE_KEY `
   --azure-file-share-name $SHARE_NAME `
   --access-mode ReadWrite
 
-Write-Host "`n=== Step 5: Update Container App to mount the volume at /app/data ===" -ForegroundColor Cyan
+# ---------- Step 5: Mount volume and set secrets ----------
+Write-Host "`n=== Step 5: Update Container App — mount /app/data and set secrets ===" -ForegroundColor Cyan
 az containerapp update `
   --name $APP_NAME `
   --resource-group $RG `
-  --set-env-vars "BEACON_SECRET=oc-beacon-sk-change-me-in-prod" `
+  --set-env-vars "BEACON_SECRET=$BeaconSecret" `
   --mount-path /app/data `
-  --storage-name $STORAGE_MOUNT_NAME
+  --storage-name $MOUNT_NAME
 
+# ---------- Done ----------
 Write-Host "`n=== Done! ===" -ForegroundColor Green
-Write-Host "Instance beacon data is now persisted in Azure Files." -ForegroundColor Green
-Write-Host "Storage account: $STORAGE_NAME / share: $SHARE_NAME" -ForegroundColor Yellow
-Write-Host "Re-run deploy-beacon.sh on each instance to re-register." -ForegroundColor Yellow
+Write-Host "Beacon data is now persisted in Azure Files." -ForegroundColor Green
+Write-Host ""
+Write-Host "Storage account : $STORAGE_NAME" -ForegroundColor Yellow
+Write-Host "File share      : $SHARE_NAME" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Note: Re-run deploy-beacon.sh on each OpenClaw instance if the app was restarted." -ForegroundColor DarkGray
