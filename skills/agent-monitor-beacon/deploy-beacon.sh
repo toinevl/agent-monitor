@@ -122,7 +122,7 @@ if [[ -z "$WORKSPACE" || ! -d "$WORKSPACE" ]]; then
   error "Could not find OpenClaw workspace. Pass --workspace PATH explicitly."
 fi
 
-SKILL_DIR="$WORKSPACE/skills/beacon"
+SKILL_DIR="$WORKSPACE/skills/agent-monitor-beacon"
 HEARTBEAT_FILE="$WORKSPACE/HEARTBEAT.md"
 
 # ---------- Install skill files ----------
@@ -137,7 +137,7 @@ if [[ -f "$SCRIPT_DIR/SKILL.md" ]]; then
   info "Copied SKILL.md from local repo"
 else
   info "Downloading SKILL.md from GitHub..."
-  SKILL_URL="https://raw.githubusercontent.com/toinevl/agent-monitor/main/skills/beacon/SKILL.md"
+  SKILL_URL="https://raw.githubusercontent.com/toinevl/agent-monitor/main/skills/agent-monitor-beacon/SKILL.md"
   if command -v curl &>/dev/null; then
     curl -fsSL "$SKILL_URL" -o "$SKILL_DIR/SKILL.md"
   elif command -v wget &>/dev/null; then
@@ -169,9 +169,9 @@ success "Config written to $CONFIG_FILE"
 if $ADD_HEARTBEAT; then
   header "💓 Updating HEARTBEAT.md..."
 
-  BEACON_LINE="- Run the beacon skill: report this instance to the central dashboard"
+  BEACON_LINE="- Run the agent-monitor-beacon skill: report this instance to the central dashboard"
 
-  if [[ -f "$HEARTBEAT_FILE" ]] && grep -qF "beacon skill" "$HEARTBEAT_FILE"; then
+  if [[ -f "$HEARTBEAT_FILE" ]] && grep -qF "agent-monitor-beacon skill" "$HEARTBEAT_FILE"; then
     warn "Beacon entry already present in HEARTBEAT.md — skipping"
   else
     if [[ ! -f "$HEARTBEAT_FILE" ]]; then
@@ -272,7 +272,7 @@ echo -e "  Skill dir   : $SKILL_DIR"
 echo ""
 if ! $ADD_HEARTBEAT; then
   echo -e "${YELLOW}Tip:${RESET} Add this line to $HEARTBEAT_FILE to auto-beacon every heartbeat:"
-  echo -e "  - Run the beacon skill: report this instance to the central dashboard"
+  echo -e "  - Run the agent-monitor-beacon skill: report this instance to the central dashboard"
   echo ""
 fi
 if ! $SEND_NOW; then
