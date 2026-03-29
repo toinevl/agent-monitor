@@ -73,6 +73,7 @@ Agent Monitor gives you complete visibility into your OpenClaw deployment:
 
 - 📚 **[Full Documentation](./DOCUMENTATION.md)** — Complete guide covering all features
 - 🚀 **[Backend README](./backend/README.md)** — API reference and backend setup
+- ☁️ **[Azure Deployment Guide](./AZURE_DEPLOYMENT.md)** — Deploy to Azure Container Apps with GitHub Actions
 - 📋 **[Changelog](./CHANGELOG.md)** — All releases and features by phase
 - 💻 **[Local Setup](./DOCUMENTATION.md#installation)** — Get running in 5 minutes
 
