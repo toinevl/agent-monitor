@@ -2,7 +2,7 @@
 
 > Real-time dashboard for monitoring OpenClaw multi-agent orchestration — sessions graph, fleet analytics, and live instance management.
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://agent-monitor.bluecliff-bb323f5a.northeurope.azurecontainerapps.io)
+[![Live Demo](https://img.shields.io/badge/demo-local%20dev%20only-blue)](http://localhost:5173)
 [![Built with React](https://img.shields.io/badge/frontend-React%20%2B%20React%20Flow-61dafb)](https://reactflow.dev)
 [![Backend](https://img.shields.io/badge/backend-Node.js%20%2B%20Express-339933)](https://nodejs.org)
 [![Deployed on Azure](https://img.shields.io/badge/deploy-Azure%20Container%20Apps-0078d4)](https://azure.microsoft.com/en-us/products/container-apps)
@@ -74,7 +74,7 @@ Agent Monitor gives you complete visibility into your OpenClaw deployment:
 - 📚 **[Full Documentation](./DOCUMENTATION.md)** — Complete guide covering all features
 - 🚀 **[Backend README](./backend/README.md)** — API reference and backend setup
 - 📋 **[Changelog](./CHANGELOG.md)** — All releases and features by phase
-- 💻 **[Live Demo](https://agent-monitor.bluecliff-bb323f5a.northeurope.azurecontainerapps.io)** — See it in action
+- 💻 **[Local Setup](./DOCUMENTATION.md#installation)** — Get running in 5 minutes
 
 ---
 
