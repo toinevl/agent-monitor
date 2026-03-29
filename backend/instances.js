@@ -20,8 +20,7 @@ const OFFLINE_THRESHOLD_MS = parseInt(process.env.OFFLINE_THRESHOLD_MS || '60000
 
 const CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
 const useAzure = !!CONNECTION_STRING;
-const useSQLite = db.isSQLite;
-const useJSON = !useAzure && !useSQLite;
+const useJSON = !useAzure; // Fallback
 
 let tableClient;
 
@@ -30,8 +29,6 @@ if (useAzure) {
   const svc = TableServiceClient.fromConnectionString(CONNECTION_STRING);
   svc.createTable(TABLE_NAME).catch(() => {}); // ignore "already exists"
   logger.info('[instances] Using Azure Table Storage');
-} else if (useSQLite) {
-  logger.info('[instances] Using SQLite database');
 } else {
   logger.info('[instances] Using JSON fallback (data/instances.json)');
 }
@@ -113,31 +110,6 @@ export async function upsertInstance(payload) {
       const entity = toEntity({ ...payload, lastSeenAt: now });
       await tableClient.upsertEntity(entity, 'Replace');
       return { ...payload, lastSeenAt: now };
-    } else if (useSQLite) {
-      const sqliteDb = db.getSQLiteDb();
-      const stmt = sqliteDb.prepare(`
-        INSERT INTO instances (instanceId, label, version, model, host, channel, agents, activeSessions, plugins, uptime, lastSeenAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(instanceId) DO UPDATE SET
-          label=excluded.label, version=excluded.version, model=excluded.model,
-          host=excluded.host, channel=excluded.channel, agents=excluded.agents,
-          activeSessions=excluded.activeSessions, plugins=excluded.plugins,
-          uptime=excluded.uptime, lastSeenAt=excluded.lastSeenAt
-      `);
-      stmt.run(
-        payload.instanceId,
-        payload.label || null,
-        payload.version || null,
-        payload.model || null,
-        payload.host || null,
-        payload.channel || null,
-        payload.agents ? JSON.stringify(payload.agents) : null,
-        payload.activeSessions || 0,
-        payload.plugins ? JSON.stringify(payload.plugins) : null,
-        payload.uptime || 0,
-        now
-      );
-      return { ...payload, lastSeenAt: now };
     } else {
       // JSON fallback
       const store = fileLoad();
@@ -165,22 +137,6 @@ export async function listInstances() {
       for await (const entity of entities) {
         records.push(fromEntity(entity));
       }
-    } else if (useSQLite) {
-      const sqliteDb = db.getSQLiteDb();
-      const stmt = sqliteDb.prepare('SELECT * FROM instances ORDER BY lastSeenAt DESC');
-      records = stmt.all().map(row => ({
-        instanceId: row.instanceId,
-        label: row.label,
-        version: row.version,
-        model: row.model,
-        host: row.host,
-        channel: row.channel,
-        agents: row.agents ? JSON.parse(row.agents) : [],
-        activeSessions: row.activeSessions,
-        plugins: row.plugins ? JSON.parse(row.plugins) : {},
-        uptime: row.uptime,
-        lastSeenAt: row.lastSeenAt,
-      }));
     } else {
       records = Object.values(fileLoad());
     }
@@ -200,10 +156,6 @@ export async function deleteInstance(instanceId) {
   try {
     if (useAzure) {
       await tableClient.deleteEntity(PARTITION, instanceId).catch(() => {});
-    } else if (useSQLite) {
-      const sqliteDb = db.getSQLiteDb();
-      const stmt = sqliteDb.prepare('DELETE FROM instances WHERE instanceId = ?');
-      stmt.run(instanceId);
     } else {
       const store = fileLoad();
       delete store[instanceId];
