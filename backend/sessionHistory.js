@@ -1,17 +1,15 @@
 /**
- * sessionHistory.js — Store and retrieve agent session history
+ * sessionHistory.js — Time-series storage for agent session snapshots
  *
- * Sessions are stored in Azure Table Storage with time-based partitions:
- * PartitionKey: "session-2026-03-29"  (date-based, for easy TTL/cleanup)
- * RowKey:       "timestamp-sessionId"  (unique, sortable by time)
- *
- * Falls back to JSON file in dev mode (data/sessions.json)
+ * Supports: Azure Table Storage (production), SQLite (dev), JSON (fallback)
+ * Configured via db.js abstraction layer.
  */
 
 import { TableClient, TableServiceClient, odata } from '@azure/data-tables';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { db } from './db.js';
 import { logError } from './logger.js';
 
 const TABLE_NAME = 'AgentSessions';
@@ -20,16 +18,15 @@ const TABLE_NAME = 'AgentSessions';
 
 const CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
 const useAzure = !!CONNECTION_STRING;
+const useSQLite = db.isSQLite;
+const useJSON = !useAzure && !useSQLite;
 
 let tableClient;
 
 if (useAzure) {
   tableClient = new TableClient(CONNECTION_STRING, TABLE_NAME);
-  // Ensure table exists
   const svc = TableServiceClient.fromConnectionString(CONNECTION_STRING);
-  svc.createTable(TABLE_NAME).catch(() => {}); // ignore "already exists"
-} else {
-  console.log('[sessionHistory] Using JSON fallback (dev mode)');
+  svc.createTable(TABLE_NAME).catch(() => {});
 }
 
 // ---------- JSON file fallback (local dev) ----------
@@ -62,47 +59,45 @@ function getDatePartition(date = new Date()) {
   return `session-${year}-${month}-${day}`;
 }
 
-function toEntity(sessionData, timestamp = Date.now()) {
-  const partition = getDatePartition();
-  const rowKey = `${timestamp}-${sessionData.id || 'unknown'}`;
-
-  return {
-    partitionKey: partition,
-    rowKey,
-    timestamp,
-    sessionId: sessionData.id || '',
-    agentCount: sessionData.agents?.length || 0,
-    edgeCount: sessionData.edges?.length || 0,
-    state: JSON.stringify(sessionData), // Full session data as JSON string
-  };
-}
-
-function fromEntity(entity) {
-  return {
-    id: entity.sessionId,
-    timestamp: entity.timestamp,
-    agentCount: entity.agentCount,
-    edgeCount: entity.edgeCount,
-    state: typeof entity.state === 'string' ? JSON.parse(entity.state) : entity.state,
-  };
-}
-
 // ---------- Public API ----------
 
 /**
- * Store a session snapshot in history
- * @param {Object} sessionData - { agents: [], edges: [] }
- * @param {number} timestamp - Unix timestamp (optional, defaults to now)
+ * Store a session snapshot
  */
 export async function storeSessionSnapshot(sessionData, timestamp = Date.now()) {
   if (!sessionData) return;
 
   try {
     if (useAzure) {
-      const entity = toEntity(sessionData, timestamp);
+      const partition = getDatePartition();
+      const rowKey = `${timestamp}-${sessionData.id || 'unknown'}`;
+      const entity = {
+        partitionKey: partition,
+        rowKey,
+        timestamp,
+        sessionId: sessionData.id || '',
+        agentCount: sessionData.agents?.length || 0,
+        edgeCount: sessionData.edges?.length || 0,
+        state: JSON.stringify(sessionData),
+      };
       await tableClient.upsertEntity(entity, 'Replace');
+    } else if (useSQLite) {
+      const sqliteDb = db.getSQLiteDb();
+      const retentionDays = parseInt(process.env.SESSION_RETENTION_DAYS || '30');
+      const expiresAt = timestamp + (retentionDays * 24 * 60 * 60 * 1000);
+      const stmt = sqliteDb.prepare(`
+        INSERT INTO sessions (id, timestamp, agentCount, edgeCount, state, expiresAt)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      stmt.run(
+        `${timestamp}-${sessionData.id || 'unknown'}`,
+        timestamp,
+        sessionData.agents?.length || 0,
+        sessionData.edges?.length || 0,
+        JSON.stringify(sessionData),
+        expiresAt
+      );
     } else {
-      // File-based: store as array of snapshots, keep last 100
       const store = fileLoad();
       const key = `${timestamp}`;
       store[key] = {
@@ -111,8 +106,6 @@ export async function storeSessionSnapshot(sessionData, timestamp = Date.now()) 
         edgeCount: sessionData.edges?.length || 0,
         state: sessionData,
       };
-
-      // Prune old entries (keep last 100)
       const keys = Object.keys(store).sort((a, b) => parseInt(b) - parseInt(a));
       if (keys.length > 100) {
         keys.slice(100).forEach(k => delete store[k]);
@@ -126,16 +119,12 @@ export async function storeSessionSnapshot(sessionData, timestamp = Date.now()) 
 
 /**
  * Retrieve session history for a date range
- * @param {Date} startDate - Start date
- * @param {Date} endDate - End date (optional, defaults to startDate)
- * @returns {Array} Session snapshots sorted by timestamp
  */
 export async function getSessionHistory(startDate, endDate = startDate) {
   try {
     let snapshots = [];
 
     if (useAzure) {
-      // Query Azure Table Storage across date partitions
       const current = new Date(startDate);
       while (current <= endDate) {
         const partition = getDatePartition(current);
@@ -144,15 +133,35 @@ export async function getSessionHistory(startDate, endDate = startDate) {
             queryOptions: { filter: odata`PartitionKey eq ${partition}` },
           });
           for await (const entity of entities) {
-            snapshots.push(fromEntity(entity));
+            snapshots.push({
+              id: entity.sessionId,
+              timestamp: entity.timestamp,
+              agentCount: entity.agentCount,
+              edgeCount: entity.edgeCount,
+              state: JSON.parse(entity.state),
+            });
           }
         } catch (err) {
-          // Partition might not exist yet, ignore
+          // Partition doesn't exist, continue
         }
         current.setDate(current.getDate() + 1);
       }
+    } else if (useSQLite) {
+      const sqliteDb = db.getSQLiteDb();
+      const startTs = startDate.getTime();
+      const endTs = endDate.getTime();
+      const stmt = sqliteDb.prepare(
+        'SELECT * FROM sessions WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp DESC'
+      );
+      const rows = stmt.all(startTs, endTs);
+      snapshots = rows.map(row => ({
+        id: row.id,
+        timestamp: row.timestamp,
+        agentCount: row.agentCount,
+        edgeCount: row.edgeCount,
+        state: JSON.parse(row.state),
+      }));
     } else {
-      // File-based: simple lookup
       const store = fileLoad();
       const startTs = startDate.getTime();
       const endTs = endDate.getTime();
@@ -164,7 +173,6 @@ export async function getSessionHistory(startDate, endDate = startDate) {
         .map(([, data]) => data);
     }
 
-    // Sort by timestamp descending (newest first)
     return snapshots.sort((a, b) => b.timestamp - a.timestamp);
   } catch (err) {
     logError(err, { context: 'get_session_history' });
@@ -173,14 +181,12 @@ export async function getSessionHistory(startDate, endDate = startDate) {
 }
 
 /**
- * Get session statistics (agent count trends, etc.)
- * @param {Date} startDate - Start date
- * @returns {Object} Stats: { avgAgentCount, maxAgentCount, snapshotCount }
+ * Get session statistics
  */
 export async function getSessionStats(startDate = new Date()) {
   try {
     const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 1); // 24-hour window
+    endDate.setDate(endDate.getDate() + 1);
 
     const snapshots = await getSessionHistory(startDate, endDate);
 
@@ -211,9 +217,7 @@ export async function getSessionStats(startDate = new Date()) {
 }
 
 /**
- * Clean up old session records (older than N days)
- * Azure Table Storage TTL not available, so manual cleanup needed
- * @param {number} retentionDays - Delete records older than this many days
+ * Clean up old session records
  */
 export async function pruneOldSessions(retentionDays = 30) {
   try {
@@ -222,7 +226,7 @@ export async function pruneOldSessions(retentionDays = 30) {
       cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
       const current = new Date();
-      current.setDate(current.getDate() - 365); // Go back up to 1 year
+      current.setDate(current.getDate() - 365);
 
       let deletedCount = 0;
 
@@ -238,14 +242,19 @@ export async function pruneOldSessions(retentionDays = 30) {
             deletedCount++;
           }
         } catch (err) {
-          // Partition doesn't exist, continue
+          // Partition doesn't exist
         }
         current.setDate(current.getDate() + 1);
       }
 
       return { success: true, deletedCount };
+    } else if (useSQLite) {
+      const sqliteDb = db.getSQLiteDb();
+      const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+      const stmt = sqliteDb.prepare('DELETE FROM sessions WHERE expiresAt < ?');
+      const result = stmt.run(cutoffMs);
+      return { success: true, deletedCount: result.changes };
     } else {
-      // File-based: prune old entries from JSON
       const store = fileLoad();
       const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
       const before = Object.keys(store).length;
