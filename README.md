@@ -69,9 +69,14 @@ Agent Monitor gives you complete visibility into your OpenClaw deployment:
 - **Sessions** are pushed by the local pusher process running alongside OpenClaw
 - The backend broadcasts all state updates over WebSocket to connected browsers
 
----
+## Quick Links
 
-## Quick Start
+- 📚 **[Full Documentation](./DOCUMENTATION.md)** — Complete guide covering all features
+- 🚀 **[Backend README](./backend/README.md)** — API reference and backend setup
+- 📋 **[Changelog](./CHANGELOG.md)** — All releases and features by phase
+- 💻 **[Live Demo](https://agent-monitor.bluecliff-bb323f5a.northeurope.azurecontainerapps.io)** — See it in action
+
+---
 
 ### Prerequisites
 
