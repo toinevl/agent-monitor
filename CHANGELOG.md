@@ -2,6 +2,132 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] — Phase 3: Analytics Dashboard & Modern Charts — 2026-03-29
+
+### Added
+
+#### Analytics Dashboard (Dashboard.jsx)
+- **New tab:** "📊 Dashboard" with comprehensive analytics and KPIs
+- **Metrics cards** with real-time statistics:
+  - Total instances with online/offline breakdown
+  - Active sessions and agent counts
+  - Max agent count (24h) with average comparison
+  - Estimated daily and monthly costs
+- **Modern chart visualizations:**
+  - **Line chart** — Agent activity trends (animated, responsive)
+  - **Bar chart** — Cost estimates per instance (top 5)
+  - **Doughnut chart** — Instance status distribution
+  - **Stats grid** — Min/max/avg agent counts + snapshot metrics
+- **Interactive controls:**
+  - Date range selector (24h, 7d, 30d quick options)
+  - Datepicker for point-in-time analysis
+  - Automatic data refresh with loading indicators
+- **Alerts system:**
+  - Real-time alerts for offline instances
+  - Color-coded severity levels
+  - Dismissible notification cards
+- **Responsive layout:**
+  - CSS Grid auto-fit for different screen sizes
+  - Professional dark theme (Slate color palette)
+  - Proper contrast and visual hierarchy
+
+#### Analytics Hooks (useAnalytics.js)
+- **useSessionStats()** — Fetch daily aggregated statistics
+  - Returns: avgAgentCount, maxAgentCount, minAgentCount, snapshotCount
+  - Configurable date parameter
+  - Automatic refetch capability
+
+- **useSessionHistory()** — Retrieve session snapshots for date range
+  - Multi-day query support
+  - Sorted by timestamp (newest first)
+  - Full state reconstruction for each snapshot
+
+- **useCostMetrics()** — Automatic cost estimation engine
+  - Supports 3 model tiers: Opus, Sonnet, Haiku
+  - Token-based pricing: input (cheaper) + output (more expensive)
+  - Per-instance daily cost calculation
+  - Aggregated daily/monthly totals
+  - Estimation formula: sessions/day × avg tokens × model rate
+
+- **useMetrics()** — Aggregate metrics computation
+  - Instance counts: total, online, offline
+  - Session counts: active
+  - Agent counts: total, average (from stats)
+  - Memoized for performance
+
+#### Chart.js Integration
+- **Dependencies added:**
+  - `chart.js@^4.4.1` — Modern charting library
+  - `react-chartjs-2@^5.2.0` — React component wrapper
+  - `date-fns@^3.3.1` — Lightweight date utilities
+- **Theme support:**
+  - Dark mode color scheme (blue/cyan/yellow/red)
+  - Responsive sizing with maintained aspect ratio
+  - Custom grid lines and axis styling
+  - Legend properly positioned and styled
+
+#### Frontend Navigation
+- **App.jsx updates:**
+  - New "📊 Dashboard" tab (middle position)
+  - Tab ordering: Sessions → Dashboard → Instances
+  - Stats header shows for both Sessions and Dashboard tabs
+  - Proper tab state management (three states)
+
+### Changed
+
+#### package.json
+- Added 3 new dependencies (chart, react-chartjs-2, date-fns)
+- No version bumps for existing packages
+- Minimal bundle impact (chart.js is lightweight)
+
+#### App.jsx Structure
+- Tab state expanded: 'sessions' | 'dashboard' | 'instances'
+- Header stats conditional rendering updated
+- Main content section refactored for third tab
+- Navigation integration seamless
+
+### Architecture
+
+- **Client-side cost calculation** — No backend impact, instant results
+- **Lazy evaluation** — Charts only render when tab is active
+- **Separated concerns** — Analytics logic in useAnalytics hook, UI in Dashboard
+- **Time-series ready** — Can scale to historical data in future
+
+### Performance
+
+- ✅ Chart.js rendering optimized
+- ✅ React.useCallback memoization on analytics functions
+- ✅ CSS Grid layout (GPU-accelerated)
+- ✅ Date calculations lightweight with date-fns
+- ✅ Lazy chart initialization (on tab click)
+
+### Backward Compatibility
+
+- ✅ All existing tabs fully functional
+- ✅ No API changes
+- ✅ Dashboard is purely additive feature
+- ✅ Sessions and Instances tabs unchanged
+- ✅ Graceful degradation if analytics data unavailable
+
+### Testing
+
+- Chart rendering with sample data
+- Date range selection (24h, 7d, 30d)
+- Cost calculation accuracy
+- Responsive layout on different resolutions
+- Error handling when endpoints unavailable
+
+### Future Enhancements
+
+- [ ] Cost model customization UI
+- [ ] Export dashboard as PDF/PNG
+- [ ] Real-time metric streaming (WebSocket)
+- [ ] Custom alerts (cost threshold, uptime %)
+- [ ] Metric history persistence (trending)
+- [ ] Advanced filtering on charts (by model, status, etc.)
+
+---
+
 ## [0.3.0] — Phase 2: Session History & Fleet Analytics — 2026-03-29
 
 ### Added

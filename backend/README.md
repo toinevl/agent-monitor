@@ -202,24 +202,58 @@ curl http://localhost:3001/api/report
 }
 ```
 
-### Health
+#### `GET /api/sessions/history` — Retrieve session history
+Get historical snapshots of agent sessions for a date range.
 
-#### `GET /api/health` — Server health
-Check backend health and connected WebSocket clients.
+Query parameters:
+- `start` — ISO date (e.g., `2026-03-29`, defaults to today)
+- `end` — ISO date (optional, defaults to start date)
 
 ```bash
-curl http://localhost:3001/api/health
+curl "http://localhost:3001/api/sessions/history?start=2026-03-29&end=2026-03-30"
 ```
 
 **Response:**
 ```json
 {
-  "ok": true,
-  "uptime": 3600.5,
-  "timestamp": "2026-03-29T15:30:00Z",
-  "connectedClients": 3
+  "startDate": "2026-03-29T00:00:00.000Z",
+  "endDate": "2026-03-30T00:00:00.000Z",
+  "snapshots": [
+    {
+      "id": "session-abc",
+      "timestamp": 1711620000000,
+      "agentCount": 5,
+      "edgeCount": 4,
+      "state": { "agents": [...], "edges": [...] }
+    }
+  ]
 }
 ```
+
+#### `GET /api/sessions/stats` — Get session statistics
+Get aggregated statistics for a day (useful for dashboards).
+
+Query parameters:
+- `date` — ISO date (e.g., `2026-03-29`, defaults to today)
+
+```bash
+curl "http://localhost:3001/api/sessions/stats?date=2026-03-29"
+```
+
+**Response:**
+```json
+{
+  "date": "2026-03-29T00:00:00.000Z",
+  "avgAgentCount": 5,
+  "maxAgentCount": 8,
+  "minAgentCount": 2,
+  "snapshotCount": 120
+}
+```
+
+---
+
+## Session History
 
 ## WebSocket Connection
 

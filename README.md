@@ -20,7 +20,18 @@ Agent Monitor gives you complete visibility into your OpenClaw deployment:
 | **Fleet Management** | Search, filter, sort, and paginate across all OpenClaw instances |
 | **Session History** | Time-series storage of agent sessions with daily analytics |
 | **Instance Beacon** | Automatic heartbeat registration for every instance with version tracking |
+| **Analytics Dashboard** | Modern dashboard with charts, metrics, and cost analysis |
 | **Briefing Reports** | Latest AI-generated reports from completed pipelines |
+
+**Dashboard Features:**
+
+- 📊 **Metrics Cards** — Key stats: instances, active sessions, agents, estimated costs
+- 📈 **Agent Activity Chart** — Line chart showing agent count trends over time
+- 💰 **Cost Breakdown** — Bar chart with estimated daily costs per instance
+- 🎯 **Instance Status** — Pie chart showing online/offline distribution
+- 📅 **Historical Analytics** — 24h, 7d, 30d views with configurable date range
+- ⚠️ **Alerts** — Real-time alerts for offline instances
+- 🔄 **Cost Estimator** — Automatic cost calculation based on model pricing and session activity
 
 **Key strengths:**
 
