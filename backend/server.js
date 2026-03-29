@@ -7,6 +7,7 @@ import { dirname, join as pathJoin } from 'path';
 import { fileURLToPath as pathFileUrl } from 'url';
 
 import { upsertInstance, listInstances, deleteInstance } from './instances.js';
+import { storeSessionSnapshot } from './sessionHistory.js';
 import { logger, httpLogger, logEvent, logError } from './logger.js';
 import {
   pushLimiter,
@@ -79,11 +80,17 @@ app.post(
     }
 
     const { agents, edges, pushedAt } = validation.data;
+    const timestamp = pushedAt || Date.now();
     pushedState = {
       agents,
       edges,
-      pushedAt: pushedAt || Date.now(),
+      pushedAt: timestamp,
     };
+
+    // Store snapshot in history (async, don't block response)
+    storeSessionSnapshot({ agents, edges }, timestamp).catch(err => {
+      logError(err, { context: 'session_snapshot_storage' });
+    });
 
     logEvent('session_state_pushed', {
       agentCount: agents.length,
@@ -178,6 +185,63 @@ app.get('/api/report', (req, res) => {
       markdown: null,
       reportPath, // Help with debugging
     });
+  }
+});
+
+/**
+ * GET /api/sessions/history — Retrieve session history for a date range
+ * Query params: ?start=2026-03-29&end=2026-03-30 (optional, defaults to today)
+ */
+app.get('/api/sessions/history', async (req, res) => {
+  try {
+    const { start, end } = req.query;
+    const startDate = start ? new Date(start) : new Date();
+    const endDate = end ? new Date(end) : new Date(startDate);
+
+    const { getSessionHistory } = await import('./sessionHistory.js');
+    const history = await getSessionHistory(startDate, endDate);
+
+    logEvent('session_history_retrieved', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      snapshotCount: history.length,
+    });
+
+    res.json({
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      snapshots: history,
+    });
+  } catch (err) {
+    logError(err, { context: 'get_session_history' });
+    res.status(500).json({ error: 'Failed to retrieve session history' });
+  }
+});
+
+/**
+ * GET /api/sessions/stats — Get session statistics for a date
+ * Query params: ?date=2026-03-29 (optional, defaults to today)
+ */
+app.get('/api/sessions/stats', async (req, res) => {
+  try {
+    const { date } = req.query;
+    const statsDate = date ? new Date(date) : new Date();
+
+    const { getSessionStats } = await import('./sessionHistory.js');
+    const stats = await getSessionStats(statsDate);
+
+    logEvent('session_stats_retrieved', {
+      date: statsDate.toISOString(),
+      ...stats,
+    });
+
+    res.json({
+      date: statsDate.toISOString(),
+      ...stats,
+    });
+  } catch (err) {
+    logError(err, { context: 'get_session_stats' });
+    res.status(500).json({ error: 'Failed to retrieve session statistics' });
   }
 });
 
