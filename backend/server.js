@@ -26,28 +26,33 @@ import {
 // ---------- Configuration ----------
 
 const PORT = process.env.PORT || 3001;
-const PUSH_SECRET = process.env.PUSH_SECRET || 'oc-push-sk-7f3a9d2e1b8c4f6a';
-const BEACON_SECRET = process.env.BEACON_SECRET || 'oc-beacon-sk-change-me-in-prod';
+const PUSH_SECRET   = process.env.PUSH_SECRET;
+const BEACON_SECRET = process.env.BEACON_SECRET;
 const REPORT_BASE_DIR =
   process.env.REPORT_BASE_DIR ||
   '/home/node/.openclaw/workspace/agents/results';
 
-// Warn if using default secrets in production
-if (process.env.NODE_ENV === 'production') {
-  if (PUSH_SECRET === 'oc-push-sk-7f3a9d2e1b8c4f6a') {
-    logger.warn('⚠️  Using default PUSH_SECRET in production!');
-  }
-  if (BEACON_SECRET === 'oc-beacon-sk-change-me-in-prod') {
-    logger.warn('⚠️  Using default BEACON_SECRET in production!');
-  }
+if (!PUSH_SECRET || !BEACON_SECRET) {
+  console.error('FATAL: PUSH_SECRET and BEACON_SECRET environment variables must be set');
+  process.exit(1);
 }
 
 // ---------- Express setup ----------
 
 const app = express();
-app.use(httpLogger); // Structured logging for all HTTP requests
-app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Limit payload size
+app.use(helmet());
+app.use(httpLogger);
+
+const allowedOrigins = process.env['allowed-origins']
+  ? process.env['allowed-origins'].split(',').map(o => o.trim())
+  : ['http://localhost:5173'];
+app.use(cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json({ limit: '10kb' }));
 
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
@@ -60,11 +65,7 @@ let connectedClients = 0; // Track active WebSocket connections
 // ---------- REST endpoints — Session monitor ----------
 
 // POST /api/push — receive state from local pusher
-app.post('/api/push', pushLimiter, (req, res) => {
-  const auth = req.headers['authorization'] || '';
-  if (auth !== `Bearer ${PUSH_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+app.post('/api/push', pushLimiter, authMiddleware('PUSH_SECRET'), (req, res) => {
 
   const { agents, edges, pushedAt } = req.body;
   if (!Array.isArray(agents) || !Array.isArray(edges)) {
@@ -414,6 +415,24 @@ wss.on('connection', async (ws, req) => {
     logError(err, { context: 'websocket_error' });
   });
 });
+
+// ---------- Graceful shutdown ----------
+
+function shutdown(signal) {
+  logger.info({ signal }, 'Shutting down gracefully...');
+  wss.clients.forEach(client => client.close(1001, 'Server shutting down'));
+  httpServer.close(() => {
+    logger.info('HTTP server closed');
+    process.exit(0);
+  });
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10_000);
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
 
 // ---------- Start server ----------
 

@@ -86,11 +86,9 @@ export function authMiddleware(secretEnvVar) {
 export function validateWSToken(req) {
   const wsToken = process.env.WS_TOKEN;
   if (!wsToken) {
-    logger.warn(
-      { message: 'WS_TOKEN not configured, allowing all connections' },
-      'WebSocket security'
-    );
-    return true; // Allow if not configured (backward compatibility)
+    // No token configured — allow all (dashboard is typically internal-only)
+    // Set WS_TOKEN env var to enforce authentication
+    return true;
   }
 
   const url = new URL(`http://localhost${req.url}`);
