@@ -42,16 +42,40 @@ jobs:
 
       - name: Deploy to Azure Container Apps
         run: |
+          az containerapp secret set \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --secrets \
+              push-secret="${{ secrets.PUSH_SECRET }}" \
+              beacon-secret="${{ secrets.BEACON_SECRET }}" \
+              azure-storage-connection-string="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+
           az containerapp update \
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --set-env-vars \
+              PUSH_SECRET=secretref:push-secret \
+              BEACON_SECRET=secretref:beacon-secret \
+              AZURE_STORAGE_CONNECTION_STRING=secretref:azure-storage-connection-string
 
-      - name: Print live URL
+      - name: Health check
         run: |
           URL=$(az containerapp show \
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --query properties.configuration.ingress.fqdn \
             --output tsv)
-          echo "✅ Deployed to: https://$URL"
+          echo "Waiting for deployment to stabilise..."
+          sleep 15
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$URL/api/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Deployed to: https://$URL"
+              exit 0
+            fi
+            echo "Health check attempt $i failed (HTTP $STATUS), retrying in 10s..."
+            sleep 10
+          done
+          echo "❌ Health check failed after 5 attempts"
+          exit 1

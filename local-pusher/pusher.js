@@ -11,9 +11,14 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-const PUSH_URL   = 'https://agent-monitor.bluecliff-bb323f5a.northeurope.azurecontainerapps.io/api/push';
-const PUSH_TOKEN = 'oc-push-sk-7f3a9d2e1b8c4f6a';
-const POLL_MS    = 3000;
+const PUSH_URL   = process.env.PUSH_URL;
+const PUSH_TOKEN = process.env.PUSH_SECRET;
+const POLL_MS    = parseInt(process.env.POLL_MS || '3000', 10);
+
+if (!PUSH_URL || !PUSH_TOKEN) {
+  console.error('FATAL: PUSH_URL and PUSH_SECRET environment variables must be set');
+  process.exit(1);
+}
 
 // ---------- Session → Agent transform ----------
 

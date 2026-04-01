@@ -1,6 +1,8 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
 import cors from 'cors';
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
 import { createServer } from 'http';
 import { readFileSync, existsSync } from 'fs';
 import { dirname, join as pathJoin } from 'path';
@@ -57,40 +59,22 @@ let connectedClients = 0; // Track active WebSocket connections
 
 // ---------- REST endpoints — Session monitor ----------
 
-/**
- * POST /api/push — Receive session state from local pusher
- * Rate limited to 60 requests/min, requires PUSH_SECRET auth
- */
-app.post(
-  '/api/push',
-  pushLimiter,
-  authMiddleware('PUSH_SECRET'),
-  (req, res) => {
-    // Validate payload schema
-    const validation = validatePayload(pushPayloadSchema, req.body);
-    if (!validation.valid) {
-      logEvent('push_validation_error', {
-        error: validation.error,
-        ip: req.ip,
-      });
-      return res.status(400).json({
-        error: 'Invalid payload',
-        details: validation.error,
-      });
-    }
+// POST /api/push — receive state from local pusher
+app.post('/api/push', pushLimiter, (req, res) => {
+  const auth = req.headers['authorization'] || '';
+  if (auth !== `Bearer ${PUSH_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 
-    const { agents, edges, pushedAt } = validation.data;
-    const timestamp = pushedAt || Date.now();
-    pushedState = {
-      agents,
-      edges,
-      pushedAt: timestamp,
-    };
+  const { agents, edges, pushedAt } = req.body;
+  if (!Array.isArray(agents) || !Array.isArray(edges)) {
+    return res.status(400).json({ error: 'agents and edges must be arrays' });
+  }
+  if (agents.length > 500 || edges.length > 1000) {
+    return res.status(400).json({ error: 'Payload exceeds maximum allowed size' });
+  }
 
-    // Store snapshot in history (async, don't block response)
-    storeSessionSnapshot({ agents, edges }, timestamp).catch(err => {
-      logError(err, { context: 'session_snapshot_storage' });
-    });
+  pushedState = { agents, edges, pushedAt: typeof pushedAt === 'number' ? pushedAt : Date.now() };
 
     logEvent('session_state_pushed', {
       agentCount: agents.length,
