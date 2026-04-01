@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd plist for agent-monitor beacon (macOS)
+
+  Install:
+    1. Edit WorkingDirectory and the script path below to match your setup
+    2. cp com.agent-monitor.beacon.plist ~/Library/LaunchAgents/
+    3. launchctl load ~/Library/LaunchAgents/com.agent-monitor.beacon.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.agent-monitor.beacon.plist
+    rm ~/Library/LaunchAgents/com.agent-monitor.beacon.plist
+
+  Run manually:
+    launchctl start com.agent-monitor.beacon
+
+  Check logs:
+    tail -f /tmp/agent-monitor-beacon.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.agent-monitor.beacon</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/PATH/TO/agent-monitor/local-pusher/beacon-mac.sh</string>
+  </array>
+
+  <!-- Run every 10 minutes -->
+  <key>StartInterval</key>
+  <integer>600</integer>
+
+  <!-- Start on login -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>WorkingDirectory</key>
+  <string>/PATH/TO/agent-monitor/local-pusher</string>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/agent-monitor-beacon.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/tmp/agent-monitor-beacon.log</string>
+
+  <!-- Restart on crash -->
+  <key>KeepAlive</key>
+  <false/>
+</dict>
+</plist>
