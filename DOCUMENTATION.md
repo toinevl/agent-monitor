@@ -8,6 +8,11 @@
 4. [Installation](#installation)
 5. [Configuration](#configuration)
 6. [Usage Guide](#usage-guide)
+   - [Connecting OpenClaw Agents](#openclaw-integration)
+   - [Linux (systemd)](#linux-systemd)
+   - [Windows (Task Scheduler)](#windows-task-scheduler)
+   - [Containers (Docker sidecar)](#containers-docker-sidecar)
+   - [Manual / Headless](#manual--headless-any-platform)
 7. [API Reference](#api-reference)
 8. [Deployment](#deployment)
 9. [Troubleshooting](#troubleshooting)
@@ -301,30 +306,159 @@ export WS_TOKEN="your-ws-token"
 
 ### OpenClaw Integration
 
-#### Installing Beacon Skill
+There are two components that connect an OpenClaw machine to Agent Monitor:
 
-Each OpenClaw instance needs the beacon skill to report to Agent Monitor:
+| Component | What it does | How often |
+|-----------|-------------|-----------|
+| **Beacon** | Reports instance info to the fleet panel | Every 10 min |
+| **Pusher** | Streams live agent session graph | Continuously |
 
-```bash
-# One-line install
-curl -fsSL https://raw.githubusercontent.com/toinevl/agent-monitor/main/skills/agent-monitor-beacon/deploy-beacon.sh \
-  | bash -s -- \
-    --instance-id "my-instance" \
-    --label "My OpenClaw" \
-    --url "https://agent-monitor.example.com" \
-    --secret "your-beacon-secret" \
-    --all
+Both are in the `local-pusher/` directory and are configured via environment variables or `beacon-config.json`.
+
+---
+
+#### Quick Setup — All Platforms
+
+**Step 1: Create `local-pusher/beacon-config.json`**
+```json
+{
+  "instanceId":   "my-machine",
+  "label":        "My Machine",
+  "centralUrl":   "https://your-agent-monitor-url.com",
+  "beaconSecret": "your-beacon-secret"
+}
 ```
 
-Or **manual install:**
+**Step 2: Test manually**
+```bash
+node local-pusher/beacon.js
+# Should print: ✅ Beacon sent to https://... as my-machine
+```
+
+**Step 3: Install as a background service** — see platform-specific instructions below.
+
+---
+
+#### Linux (systemd)
+
+One command installs both beacon (timer) and pusher (persistent service):
+
+```bash
+BEACON_SECRET=xxx PUSH_SECRET=xxx bash local-pusher/install-linux.sh
+```
+
+This creates two systemd user services:
+- `agent-monitor-beacon.timer` — runs beacon every 10 minutes, survives reboots
+- `agent-monitor-pusher.service` — runs pusher continuously, auto-restarts on crash
+
+**Useful commands:**
+```bash
+# Check status
+systemctl --user status agent-monitor-beacon.timer
+systemctl --user status agent-monitor-pusher.service
+
+# View logs
+tail -f /tmp/agent-monitor-beacon.log
+tail -f /tmp/agent-monitor-pusher.log
+
+# Uninstall
+bash local-pusher/install-linux.sh --uninstall
+```
+
+---
+
+#### Windows (Task Scheduler)
+
+Run as Administrator in PowerShell:
+
+```powershell
+$env:BEACON_SECRET="xxx"; $env:PUSH_SECRET="xxx"
+.\local-pusher\install-windows.ps1
+```
+
+This registers two scheduled tasks:
+- `AgentMonitorBeacon` — runs beacon every 10 minutes
+- `AgentMonitorPusher` — starts at login, restarts automatically on crash
+
+**Useful commands:**
+```powershell
+# Check status
+Get-ScheduledTask -TaskName AgentMonitorBeacon
+Get-ScheduledTask -TaskName AgentMonitorPusher
+
+# Uninstall
+.\local-pusher\install-windows.ps1 -Uninstall
+```
+
+---
+
+#### Containers (Docker sidecar)
+
+Add a lightweight sidecar container alongside your OpenClaw container using the included `Dockerfile.beacon`:
+
+**docker-compose.yml:**
+```yaml
+services:
+  openclaw:
+    image: your-openclaw-image
+    # ...
+
+  agent-monitor:
+    build:
+      context: ./local-pusher
+      dockerfile: Dockerfile.beacon
+    restart: always
+    environment:
+      INSTANCE_ID: my-openclaw-server
+      LABEL: "My OpenClaw Server"
+      CENTRAL_URL: https://your-agent-monitor-url.com
+      BEACON_SECRET: ${BEACON_SECRET}
+      PUSH_SECRET: ${PUSH_SECRET}
+    network_mode: "service:openclaw"  # shares network with openclaw container
+```
+
+The sidecar runs:
+- Beacon via `supercronic` cron (every 10 min)
+- Pusher as a persistent process with auto-restart
+
+**Build and run:**
+```bash
+docker compose up -d agent-monitor
+docker compose logs -f agent-monitor
+```
+
+---
+
+#### Manual / Headless (any platform)
+
+If you prefer not to use an installer, run both processes manually using environment variables:
+
+```bash
+# Beacon (run once or on a cron schedule)
+INSTANCE_ID=my-machine \
+CENTRAL_URL=https://your-agent-monitor-url.com \
+BEACON_SECRET=xxx \
+node local-pusher/beacon.js
+
+# Pusher (run continuously)
+PUSH_URL=https://your-agent-monitor-url.com/api/push \
+PUSH_SECRET=xxx \
+node local-pusher/pusher.js
+```
+
+---
+
+#### Beacon Skill (OpenClaw heartbeat alternative)
+
+For instances where you prefer the OpenClaw agent itself to report in (rather than a background service), install the beacon skill:
 
 1. Copy `skills/agent-monitor-beacon/` to your instance's `skills/` folder
 2. Create `skills/agent-monitor-beacon/beacon-config.json`:
 ```json
 {
-  "instanceId": "home-pi",
-  "label": "Home Raspberry Pi",
-  "centralUrl": "https://agent-monitor.example.com",
+  "instanceId":   "home-pi",
+  "label":        "Home Raspberry Pi",
+  "centralUrl":   "https://your-agent-monitor-url.com",
   "beaconSecret": "your-beacon-secret"
 }
 ```
@@ -333,28 +467,7 @@ Or **manual install:**
 - Run the agent-monitor-beacon skill: report this instance to the central dashboard
 ```
 
-The beacon will automatically register every heartbeat (~15–30 min).
-
-#### Local Pusher Integration
-
-For session state visualization, you need a local pusher process on the OpenClaw host:
-
-The pusher watches OpenClaw's agent activity and POSTs to `/api/push` with current state:
-
-```bash
-# Example pusher script (pseudocode)
-while true:
-  agents = get_current_agents()  # From OpenClaw
-  edges = get_current_edges()    # From OpenClaw
-  
-  POST /api/push {
-    "agents": agents,
-    "edges": edges,
-    "pushedAt": Date.now()
-  }
-  
-  sleep(30 seconds)
-```
+The OpenClaw agent will report every heartbeat (~15–30 min). Note: the instance will show as offline between heartbeats unless you also run the background beacon service.
 
 ---
 

@@ -76,6 +76,7 @@ Agent Monitor gives you complete visibility into your OpenClaw deployment:
 - ☁️ **[Azure Deployment Guide](./AZURE_DEPLOYMENT.md)** — Deploy to Azure Container Apps with GitHub Actions
 - 📋 **[Changelog](./CHANGELOG.md)** — All releases and features by phase
 - 💻 **[Local Setup](./DOCUMENTATION.md#installation)** — Get running in 5 minutes
+- 🔌 **[Connecting Agents](./DOCUMENTATION.md#openclaw-integration)** — Linux, Windows, Docker sidecar
 
 ---
 
