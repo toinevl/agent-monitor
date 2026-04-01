@@ -42,10 +42,22 @@ jobs:
 
       - name: Deploy to Azure Container Apps
         run: |
+          az containerapp secret set \
+            --name ${{ env.CONTAINER_APP_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --secrets \
+              push-secret="${{ secrets.PUSH_SECRET }}" \
+              beacon-secret="${{ secrets.BEACON_SECRET }}" \
+              azure-storage-connection-string="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}"
+
           az containerapp update \
             --name ${{ env.CONTAINER_APP_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --set-env-vars \
+              PUSH_SECRET=secretref:push-secret \
+              BEACON_SECRET=secretref:beacon-secret \
+              AZURE_STORAGE_CONNECTION_STRING=secretref:azure-storage-connection-string
 
       - name: Health check
         run: |
