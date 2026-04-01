@@ -1,0 +1,57 @@
+# Dockerfile.beacon — lightweight sidecar container for agent-monitor beacon + pusher
+#
+# Build:
+#   docker build -f local-pusher/Dockerfile.beacon -t agent-monitor-beacon local-pusher/
+#
+# Run (alongside your OpenClaw container):
+#   docker run -d --restart=always \
+#     -e INSTANCE_ID=my-container \
+#     -e LABEL="My Container" \
+#     -e CENTRAL_URL=https://agent-monitor.bluecliff-bb323f5a.northeurope.azurecontainerapps.io \
+#     -e BEACON_SECRET=xxx \
+#     -e PUSH_SECRET=xxx \
+#     --network=container:<openclaw-container-name> \
+#     agent-monitor-beacon
+#
+# Or add to your existing docker-compose.yml — see example at bottom of file.
+
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY beacon.js pusher.js ./
+
+# Install supercronic for reliable cron in containers (no cron daemon needed)
+RUN apk add --no-cache curl && \
+    ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/') && \
+    curl -fsSL "https://github.com/aptible/supercronic/releases/latest/download/supercronic-linux-$ARCH" \
+      -o /usr/local/bin/supercronic && \
+    chmod +x /usr/local/bin/supercronic
+
+# Write crontab: beacon every 10 min, pusher kept alive by supervisor
+RUN echo "*/10 * * * * node /app/beacon.js" > /app/crontab
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]
+
+# ---- docker-compose.yml example ----
+# services:
+#   openclaw:
+#     image: your-openclaw-image
+#     ...
+#
+#   agent-monitor:
+#     image: agent-monitor-beacon
+#     build:
+#       context: ./local-pusher
+#       dockerfile: Dockerfile.beacon
+#     restart: always
+#     environment:
+#       INSTANCE_ID: my-openclaw-server
+#       LABEL: "My OpenClaw Server"
+#       CENTRAL_URL: https://agent-monitor.bluecliff-bb323f5a.northeurope.azurecontainerapps.io
+#       BEACON_SECRET: ${BEACON_SECRET}
+#       PUSH_SECRET: ${PUSH_SECRET}
+#     network_mode: "service:openclaw"  # shares network with openclaw container
