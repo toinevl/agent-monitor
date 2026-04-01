@@ -1,25 +1,46 @@
 # Agent Monitor
 
-> Real-time dashboard for monitoring OpenClaw multi-agent orchestration — sessions graph, fleet overview, and AI briefing reports.
+> Real-time dashboard for monitoring OpenClaw multi-agent orchestration — sessions graph, fleet analytics, and live instance management.
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://agent-monitor.bluecliff-bb323f5a.northeurope.azurecontainerapps.io)
+[![Live Demo](https://img.shields.io/badge/demo-local%20dev%20only-blue)](http://localhost:5173)
 [![Built with React](https://img.shields.io/badge/frontend-React%20%2B%20React%20Flow-61dafb)](https://reactflow.dev)
 [![Backend](https://img.shields.io/badge/backend-Node.js%20%2B%20Express-339933)](https://nodejs.org)
 [![Deployed on Azure](https://img.shields.io/badge/deploy-Azure%20Container%20Apps-0078d4)](https://azure.microsoft.com/en-us/products/container-apps)
+[![Hardened](https://img.shields.io/badge/security-Rate%20Limited%20%2B%20Auth-success)](./backend/README.md)
 
 ---
 
 ## Overview
 
-Agent Monitor gives you a live window into your OpenClaw deployment:
+Agent Monitor gives you complete visibility into your OpenClaw deployment:
 
-| Tab | What it shows |
-|-----|---------------|
-| **Sessions** | Real-time graph of active agent sessions and their relationships |
-| **Instances** | Fleet overview — every OpenClaw instance beaconing in, with status, version, model, and uptime |
-| **Reports** | Latest AI briefing report from your pipeline |
+| Feature | Description |
+|---------|-------------|
+| **Live Sessions Graph** | Real-time visualization of agent orchestration with status indicators |
+| **Fleet Management** | Search, filter, sort, and paginate across all OpenClaw instances |
+| **Session History** | Time-series storage of agent sessions with daily analytics |
+| **Instance Beacon** | Automatic heartbeat registration for every instance with version tracking |
+| **Analytics Dashboard** | Modern dashboard with charts, metrics, and cost analysis |
+| **Briefing Reports** | Latest AI-generated reports from completed pipelines |
 
-Updates are push-based over WebSocket — no polling, no inbound connectivity required from the agents.
+**Dashboard Features:**
+
+- 📊 **Metrics Cards** — Key stats: instances, active sessions, agents, estimated costs
+- 📈 **Agent Activity Chart** — Line chart showing agent count trends over time
+- 💰 **Cost Breakdown** — Bar chart with estimated daily costs per instance
+- 🎯 **Instance Status** — Pie chart showing online/offline distribution
+- 📅 **Historical Analytics** — 24h, 7d, 30d views with configurable date range
+- ⚠️ **Alerts** — Real-time alerts for offline instances
+- 🔄 **Cost Estimator** — Automatic cost calculation based on model pricing and session activity
+
+**Key strengths:**
+
+- 🚀 **Push-based architecture** — WebSocket broadcasts for real-time updates (no polling)
+- 🔍 **Advanced filtering** — Search by name/ID, filter by status, sort by activity
+- 📊 **Analytics dashboard** — Daily session metrics (agent count trends) via `/api/sessions/stats`
+- 📈 **Historical data** — 30-day session snapshots with Azure Table Storage or JSON fallback
+- 🔐 **Production-ready** — Rate limiting, structured logging, request validation, WebSocket auth
+- ⚡ **Scalable** — Stateless backend, runs on Azure Container Apps with scale-to-zero
 
 ---
 
@@ -48,9 +69,15 @@ Updates are push-based over WebSocket — no polling, no inbound connectivity re
 - **Sessions** are pushed by the local pusher process running alongside OpenClaw
 - The backend broadcasts all state updates over WebSocket to connected browsers
 
----
+## Quick Links
 
-## Quick Start
+- 📚 **[Full Documentation](./DOCUMENTATION.md)** — Complete guide covering all features
+- 🚀 **[Backend README](./backend/README.md)** — API reference and backend setup
+- ☁️ **[Azure Deployment Guide](./AZURE_DEPLOYMENT.md)** — Deploy to Azure Container Apps with GitHub Actions
+- 📋 **[Changelog](./CHANGELOG.md)** — All releases and features by phase
+- 💻 **[Local Setup](./DOCUMENTATION.md#installation)** — Get running in 5 minutes
+
+---
 
 ### Prerequisites
 
@@ -220,6 +247,63 @@ Auth: `Authorization: Bearer <BEACON_SECRET>`
    ```
 
 Without the connection string the backend silently falls back to `data/instances.json`.
+
+---
+
+## API Reference
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/push` | `PUSH_SECRET` | Push agent session state |
+| `GET` | `/api/state` | — | Latest session snapshot |
+| `GET` | `/api/sessions/history` | — | Session history for date range (query: ?start=...&end=...) |
+| `GET` | `/api/sessions/stats` | — | Session statistics for a day (query: ?date=...) |
+| `POST` | `/api/beacon` | `BEACON_SECRET` | Instance beacon / registration |
+| `GET` | `/api/instances` | — | List all registered instances |
+| `DELETE` | `/api/instances/:id` | `BEACON_SECRET` | Remove an instance |
+| `GET` | `/api/health` | — | Health check with uptime |
+| `GET` | `/api/report` | — | Latest AI briefing report |
+
+---
+
+## New in Phase 2: Session History & Analytics
+
+### Session History Storage
+
+Sessions are now automatically persisted on each push to `/api/push`:
+
+- **Storage backend:** Azure Table Storage (`AgentSessions` table) or `data/sessions.json` (dev)
+- **Partition strategy:** Date-based (e.g., `session-2026-03-29`)
+- **Data retention:** Configurable TTL (default 30 days)
+- **Query:** `GET /api/sessions/history?start=2026-03-29&end=2026-03-30`
+
+### Session Statistics
+
+Get daily aggregates of agent activity:
+
+```bash
+curl http://localhost:3001/api/sessions/stats?date=2026-03-29
+```
+
+**Response:**
+```json
+{
+  "date": "2026-03-29T00:00:00.000Z",
+  "avgAgentCount": 5,
+  "maxAgentCount": 8,
+  "minAgentCount": 2,
+  "snapshotCount": 120
+}
+```
+
+### Fleet Management Enhancements
+
+The **Instances** tab now includes:
+
+- **Search** — by label, instanceId, or version
+- **Filter** — by status (online/offline)
+- **Sort** — by last seen, status, name, or active sessions
+- **Pagination** — 12 instances per page with navigation
 
 ---
 

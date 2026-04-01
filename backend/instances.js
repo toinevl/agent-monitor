@@ -1,21 +1,16 @@
 /**
- * instances.js — Azure Table Storage backed store for OpenClaw instance beacons
+ * instances.js — Azure Table Storage or SQLite backed store for OpenClaw instance beacons
  *
- * Falls back to a local JSON file if AZURE_STORAGE_CONNECTION_STRING is not set
- * (useful for local dev).
- *
- * Table: OpenClawInstances
- * PartitionKey: "instances"  (all records in one partition for easy query)
- * RowKey:       instanceId
- *
- * Complex fields (agents, plugins) are JSON-stringified before write and
- * parsed on read, since Azure Table Storage only supports flat key/value rows.
+ * Falls back to a local JSON file if neither Azure nor SQLite is configured.
+ * Configured via db.js abstraction layer.
  */
 
 import { TableClient, TableServiceClient, odata } from '@azure/data-tables';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { db } from './db.js';
+import { logger, logError } from './logger.js';
 
 const TABLE_NAME  = 'OpenClawInstances';
 const PARTITION   = 'instances';
@@ -25,17 +20,17 @@ const OFFLINE_THRESHOLD_MS = parseInt(process.env.OFFLINE_THRESHOLD_MS || '60000
 
 const CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING || '';
 const useAzure = !!CONNECTION_STRING;
+const useJSON = !useAzure; // Fallback
 
 let tableClient;
 
 if (useAzure) {
   tableClient = new TableClient(CONNECTION_STRING, TABLE_NAME);
-  // Ensure table exists (idempotent)
   const svc = TableServiceClient.fromConnectionString(CONNECTION_STRING);
   svc.createTable(TABLE_NAME).catch(() => {}); // ignore "already exists"
-  console.log(`[instances] Using Azure Table Storage — table: ${TABLE_NAME}`);
+  logger.info('[instances] Using Azure Table Storage');
 } else {
-  console.log('[instances] AZURE_STORAGE_CONNECTION_STRING not set — using local JSON fallback');
+  logger.info('[instances] Using JSON fallback (data/instances.json)');
 }
 
 // ---------- JSON file fallback (local dev) ----------
@@ -110,47 +105,64 @@ export async function upsertInstance(payload) {
   if (!payload?.instanceId) throw new Error('instanceId is required');
   const now = Date.now();
 
-  if (useAzure) {
-    const entity = toEntity({ ...payload, lastSeenAt: now });
-    await tableClient.upsertEntity(entity, 'Replace');
-    return { ...payload, lastSeenAt: now };
-  } else {
-    const store = fileLoad();
-    store[payload.instanceId] = { ...payload, lastSeenAt: now };
-    fileSave(store);
-    return store[payload.instanceId];
+  try {
+    if (useAzure) {
+      const entity = toEntity({ ...payload, lastSeenAt: now });
+      await tableClient.upsertEntity(entity, 'Replace');
+      return { ...payload, lastSeenAt: now };
+    } else {
+      // JSON fallback
+      const store = fileLoad();
+      store[payload.instanceId] = { ...payload, lastSeenAt: now };
+      fileSave(store);
+      return store[payload.instanceId];
+    }
+  } catch (err) {
+    logError(err, { context: 'upsert_instance', instanceId: payload.instanceId });
+    throw err;
   }
 }
 
 export async function listInstances() {
   const now = Date.now();
 
-  let records;
-  if (useAzure) {
-    const entities = tableClient.listEntities({
-      queryOptions: { filter: odata`PartitionKey eq ${PARTITION}` },
-    });
-    records = [];
-    for await (const entity of entities) {
-      records.push(fromEntity(entity));
-    }
-  } else {
-    records = Object.values(fileLoad());
-  }
+  try {
+    let records;
 
-  return records.map(inst => ({
-    ...inst,
-    online:      now - (inst.lastSeenAt || 0) < OFFLINE_THRESHOLD_MS,
-    lastSeenAgo: Math.floor((now - (inst.lastSeenAt || 0)) / 1000),
-  }));
+    if (useAzure) {
+      const entities = tableClient.listEntities({
+        queryOptions: { filter: odata`PartitionKey eq ${PARTITION}` },
+      });
+      records = [];
+      for await (const entity of entities) {
+        records.push(fromEntity(entity));
+      }
+    } else {
+      records = Object.values(fileLoad());
+    }
+
+    return records.map(inst => ({
+      ...inst,
+      online: now - (inst.lastSeenAt || 0) < OFFLINE_THRESHOLD_MS,
+      lastSeenAgo: Math.floor((now - (inst.lastSeenAt || 0)) / 1000),
+    }));
+  } catch (err) {
+    logError(err, { context: 'list_instances' });
+    return [];
+  }
 }
 
 export async function deleteInstance(instanceId) {
-  if (useAzure) {
-    await tableClient.deleteEntity(PARTITION, instanceId).catch(() => {});
-  } else {
-    const store = fileLoad();
-    delete store[instanceId];
-    fileSave(store);
+  try {
+    if (useAzure) {
+      await tableClient.deleteEntity(PARTITION, instanceId).catch(() => {});
+    } else {
+      const store = fileLoad();
+      delete store[instanceId];
+      fileSave(store);
+    }
+  } catch (err) {
+    logError(err, { context: 'delete_instance', instanceId });
+    throw err;
   }
 }
