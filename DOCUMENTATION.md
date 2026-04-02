@@ -9,10 +9,14 @@
 5. [Configuration](#configuration)
 6. [Usage Guide](#usage-guide)
    - [Connecting OpenClaw Agents](#openclaw-integration)
+   - [Prerequisites](#prerequisites-per-machine)
+   - [Getting the files onto your machine](#getting-the-files-onto-your-machine)
    - [Linux (systemd)](#linux-systemd)
+   - [macOS (launchd)](#macos-launchd)
    - [Windows (Task Scheduler)](#windows-task-scheduler)
    - [Containers (Docker sidecar)](#containers-docker-sidecar)
    - [Manual / Headless](#manual--headless-any-platform)
+   - [Verifying the connection](#verifying-the-connection)
 7. [API Reference](#api-reference)
 8. [Deployment](#deployment)
 9. [Troubleshooting](#troubleshooting)
@@ -243,9 +247,9 @@ docker run -p 8080:8080 \
 **Logging:**
 - `LOG_LEVEL` — debug, info, warn, error (default: debug in dev, info in prod)
 
-**Authentication Secrets (⚠️ Change in production):**
-- `PUSH_SECRET` — Bearer token for `/api/push` (default: oc-push-sk-...)
-- `BEACON_SECRET` — Bearer token for `/api/beacon` (default: oc-beacon-sk-...)
+**Authentication Secrets (required — no defaults):**
+- `PUSH_SECRET` — Bearer token for `/api/push` — server will not start without this
+- `BEACON_SECRET` — Bearer token for `/api/beacon` — server will not start without this
 - `WS_TOKEN` — Optional token for WebSocket auth (query: `?token=...`)
 
 **Storage:**
@@ -261,18 +265,20 @@ docker run -p 8080:8080 \
 ### Production Setup
 
 ```bash
-# Generate secure secrets
-openssl rand -base64 32  # For PUSH_SECRET
-openssl rand -base64 32  # For BEACON_SECRET
+# Generate secure secrets (do this once, store results safely)
+openssl rand -base64 32  # use output as PUSH_SECRET
+openssl rand -base64 32  # use output as BEACON_SECRET
 
-# Set environment variables
+# Required — server will not start without these
+export PUSH_SECRET="<generated-above>"
+export BEACON_SECRET="<generated-above>"
+
+# Recommended
 export NODE_ENV=production
-export PUSH_SECRET="your-random-secret-here"
-export BEACON_SECRET="your-random-secret-here"
-export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=..."
+export AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=..."
 
-# (Optional) Enable WebSocket auth
-export WS_TOKEN="your-ws-token"
+# Optional — enables WebSocket token authentication
+export WS_TOKEN="<another-generated-secret>"
 ```
 
 ---
@@ -317,49 +323,80 @@ Both are in the `local-pusher/` directory and are configured via environment var
 
 ---
 
-#### Quick Setup — All Platforms
+#### Prerequisites (per machine)
 
-**Step 1: Create `local-pusher/beacon-config.json`**
-```json
-{
-  "instanceId":   "my-machine",
-  "label":        "My Machine",
-  "centralUrl":   "https://your-agent-monitor-url.com",
-  "beaconSecret": "your-beacon-secret"
-}
-```
+Every machine running the beacon or pusher needs:
 
-**Step 2: Test manually**
+| Requirement | Version | Check |
+|-------------|---------|-------|
+| **Node.js** | 18+ | `node --version` |
+| **npm** | any | `npm --version` |
+| Network access | outbound HTTPS | `curl https://your-agent-monitor-url.com/api/health` |
+
+Node.js is already present on any machine running OpenClaw. If not installed, download from [nodejs.org](https://nodejs.org).
+
+---
+
+#### Getting the files onto your machine
+
+You need the `local-pusher/` directory from this repo on the target machine. Pick one method:
+
+**Option A — Clone the repo (recommended)**
 ```bash
-node local-pusher/beacon.js
-# Should print: ✅ Beacon sent to https://... as my-machine
+git clone https://github.com/toinevl/agent-monitor.git
+cd agent-monitor/local-pusher
+npm install   # installs beacon.js dependencies
 ```
 
-**Step 3: Install as a background service** — see platform-specific instructions below.
+**Option B — Copy just the `local-pusher/` folder**
+```bash
+# From a machine that has the repo:
+scp -r local-pusher/ user@target-machine:~/agent-monitor-client/
+
+# On the target machine:
+cd ~/agent-monitor-client
+npm install
+```
+
+**Option C — For containers**
+No manual step needed — the `Dockerfile.beacon` handles everything.
 
 ---
 
 #### Linux (systemd)
 
-One command installs both beacon (timer) and pusher (persistent service):
+**Step 1: Get the files** (see above)
 
+**Step 2: Run the installer**
 ```bash
-BEACON_SECRET=xxx PUSH_SECRET=xxx bash local-pusher/install-linux.sh
+cd agent-monitor   # or wherever you cloned/copied
+BEACON_SECRET=<your-beacon-secret> \
+PUSH_SECRET=<your-push-secret> \
+bash local-pusher/install-linux.sh
 ```
+The installer will ask for an instance ID (e.g. `linux-server-1`) and a label (e.g. `Linux Server 1`).
 
-This creates two systemd user services:
-- `agent-monitor-beacon.timer` — runs beacon every 10 minutes, survives reboots
-- `agent-monitor-pusher.service` — runs pusher continuously, auto-restarts on crash
-
-**Useful commands:**
+**Step 3: Verify**
 ```bash
-# Check status
+# Check both services are running
 systemctl --user status agent-monitor-beacon.timer
 systemctl --user status agent-monitor-pusher.service
 
-# View logs
+# Watch the logs
 tail -f /tmp/agent-monitor-beacon.log
+# Expected: ✅ Beacon sent to https://... as linux-server-1
+```
+
+**Step 4: Confirm in the dashboard**
+Open the Agent Monitor → **Instances** tab — your machine should appear within 10 minutes.
+
+**Useful commands:**
+```bash
+# View pusher log
 tail -f /tmp/agent-monitor-pusher.log
+
+# Restart services
+systemctl --user restart agent-monitor-pusher.service
 
 # Uninstall
 bash local-pusher/install-linux.sh --uninstall
@@ -367,24 +404,81 @@ bash local-pusher/install-linux.sh --uninstall
 
 ---
 
-#### Windows (Task Scheduler)
+#### macOS (launchd)
 
-Run as Administrator in PowerShell:
+**Step 1: Get the files** (see above)
 
-```powershell
-$env:BEACON_SECRET="xxx"; $env:PUSH_SECRET="xxx"
-.\local-pusher\install-windows.ps1
+**Step 2: Run the installer**
+```bash
+cd agent-monitor   # or wherever you cloned/copied
+BEACON_SECRET=<your-beacon-secret> \
+PUSH_SECRET=<your-push-secret> \
+bash local-pusher/install-mac.sh
+```
+The installer will ask for an instance ID (e.g. `macbook-pro`) and a label (e.g. `MacBook Pro`), then register both launchd services.
+
+**Step 3: Verify**
+```bash
+# Check services are loaded
+launchctl list | grep agent-monitor
+
+# Watch the logs
+tail -f /tmp/agent-monitor-beacon.log
+# Expected: ✅ Beacon sent to https://... as macbook-pro
+
+tail -f /tmp/agent-monitor-pusher.log
 ```
 
-This registers two scheduled tasks:
-- `AgentMonitorBeacon` — runs beacon every 10 minutes
-- `AgentMonitorPusher` — starts at login, restarts automatically on crash
+**Step 4: Confirm in the dashboard**
+Open the Agent Monitor → **Instances** tab — your Mac should appear within 10 minutes.
+
+**Useful commands:**
+```bash
+# Manually trigger a beacon
+launchctl start com.agent-monitor.beacon
+
+# Uninstall
+bash local-pusher/install-mac.sh --uninstall
+```
+
+---
+
+#### Windows (Task Scheduler)
+
+**Step 1: Get the files**
+
+Open PowerShell and clone or copy the repo:
+```powershell
+git clone https://github.com/toinevl/agent-monitor.git
+cd agent-monitor\local-pusher
+npm install
+```
+
+**Step 2: Run the installer as Administrator**
+```powershell
+$env:BEACON_SECRET="<your-beacon-secret>"
+$env:PUSH_SECRET="<your-push-secret>"
+.\local-pusher\install-windows.ps1
+```
+The installer will ask for an instance ID (e.g. `windows-desktop`) and a label (e.g. `Windows Desktop`), then register both scheduled tasks.
+
+**Step 3: Verify**
+```powershell
+# Check tasks are registered and running
+Get-ScheduledTask -TaskName AgentMonitorBeacon
+Get-ScheduledTask -TaskName AgentMonitorPusher
+
+# View logs in Event Viewer or:
+Get-Content "$env:TEMP\agent-monitor-beacon.log" -Wait
+```
+
+**Step 4: Confirm in the dashboard**
+Open the Agent Monitor → **Instances** tab — your machine should appear within 10 minutes.
 
 **Useful commands:**
 ```powershell
-# Check status
-Get-ScheduledTask -TaskName AgentMonitorBeacon
-Get-ScheduledTask -TaskName AgentMonitorPusher
+# Manually trigger a beacon
+Start-ScheduledTask -TaskName AgentMonitorBeacon
 
 # Uninstall
 .\local-pusher\install-windows.ps1 -Uninstall
@@ -394,9 +488,8 @@ Get-ScheduledTask -TaskName AgentMonitorPusher
 
 #### Containers (Docker sidecar)
 
-Add a lightweight sidecar container alongside your OpenClaw container using the included `Dockerfile.beacon`:
+**Step 1: Add to your `docker-compose.yml`**
 
-**docker-compose.yml:**
 ```yaml
 services:
   openclaw:
@@ -417,34 +510,75 @@ services:
     network_mode: "service:openclaw"  # shares network with openclaw container
 ```
 
+**Step 2: Start the sidecar**
+```bash
+docker compose up -d agent-monitor
+```
+
+**Step 3: Verify**
+```bash
+docker compose logs -f agent-monitor
+# Expected: ✅ Beacon sent to https://... as my-openclaw-server
+```
+
+**Step 4: Confirm in the dashboard**
+Open the Agent Monitor → **Instances** tab — the container instance should appear within 10 minutes.
+
 The sidecar runs:
 - Beacon via `supercronic` cron (every 10 min)
 - Pusher as a persistent process with auto-restart
-
-**Build and run:**
-```bash
-docker compose up -d agent-monitor
-docker compose logs -f agent-monitor
-```
 
 ---
 
 #### Manual / Headless (any platform)
 
-If you prefer not to use an installer, run both processes manually using environment variables:
+Use this if you prefer to manage processes yourself or use your own process manager (PM2, supervisor, etc.):
 
+**Step 1: Get the files** (see above)
+
+**Step 2: Create `beacon-config.json`**
+```json
+{
+  "instanceId":   "my-machine",
+  "label":        "My Machine",
+  "centralUrl":   "https://your-agent-monitor-url.com",
+  "beaconSecret": "your-beacon-secret"
+}
+```
+
+**Step 3: Run beacon and pusher**
 ```bash
-# Beacon (run once or on a cron schedule)
-INSTANCE_ID=my-machine \
-CENTRAL_URL=https://your-agent-monitor-url.com \
-BEACON_SECRET=xxx \
+# Beacon — run once to test, then add to cron/scheduler
 node local-pusher/beacon.js
+# Expected: ✅ Beacon sent to https://... as my-machine
 
-# Pusher (run continuously)
+# Pusher — run continuously
 PUSH_URL=https://your-agent-monitor-url.com/api/push \
-PUSH_SECRET=xxx \
+PUSH_SECRET=<your-push-secret> \
 node local-pusher/pusher.js
 ```
+
+**Example cron entry (Linux/macOS):**
+```
+*/10 * * * * cd /path/to/agent-monitor && BEACON_SECRET=xxx node local-pusher/beacon.js >> /tmp/beacon.log 2>&1
+```
+
+---
+
+#### Verifying the connection
+
+After installing on any platform:
+
+1. Open the Agent Monitor dashboard in your browser
+2. Go to the **Instances** tab
+3. Your machine should appear as **online** (green) within 10 minutes
+4. The **Sessions** tab will show a live agent graph once the pusher has data to send
+
+If your machine doesn't appear:
+- Check the beacon log for errors
+- Verify `BEACON_SECRET` matches what's configured on the server
+- Test connectivity: `curl https://your-agent-monitor-url.com/api/health`
+- Check the Troubleshooting section below
 
 ---
 
@@ -452,8 +586,9 @@ node local-pusher/pusher.js
 
 For instances where you prefer the OpenClaw agent itself to report in (rather than a background service), install the beacon skill:
 
-1. Copy `skills/agent-monitor-beacon/` to your instance's `skills/` folder
-2. Create `skills/agent-monitor-beacon/beacon-config.json`:
+**Step 1:** Copy `skills/agent-monitor-beacon/` to your instance's `skills/` folder
+
+**Step 2:** Create `skills/agent-monitor-beacon/beacon-config.json`:
 ```json
 {
   "instanceId":   "home-pi",
@@ -462,7 +597,8 @@ For instances where you prefer the OpenClaw agent itself to report in (rather th
   "beaconSecret": "your-beacon-secret"
 }
 ```
-3. Add to instance's `HEARTBEAT.md`:
+
+**Step 3:** Add to the instance's `HEARTBEAT.md`:
 ```
 - Run the agent-monitor-beacon skill: report this instance to the central dashboard
 ```
