@@ -3,8 +3,8 @@
  * Supports: search by label/ID, filter by status, sort by various fields
  */
 
-import { useState, useMemo, useEffect } from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { ChevronDown, Search, X, RefreshCw, EyeOff, Eye } from 'lucide-react';
 
 function ago(sec) {
   if (sec < 60) return `${sec}s ago`;
@@ -280,16 +280,45 @@ function SortDropdown({ value, onChange }) {
   );
 }
 
-export default function InstancesPanel({ instances }) {
+const HIDE_OFFLINE_KEY = 'instancesPanel.hideOffline';
+
+export default function InstancesPanel({ instances, onRefresh }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'online', 'offline'
   const [sortBy, setSortBy] = useState('lastSeen');
   const [currentPage, setCurrentPage] = useState(1);
+  const [hideOffline, setHideOffline] = useState(
+    () => localStorage.getItem(HIDE_OFFLINE_KEY) === 'true'
+  );
+  const [refreshing, setRefreshing] = useState(false);
   const ITEMS_PER_PAGE = 12;
+
+  const toggleHideOffline = useCallback(() => {
+    setHideOffline(prev => {
+      const next = !prev;
+      localStorage.setItem(HIDE_OFFLINE_KEY, String(next));
+      return next;
+    });
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh || refreshing) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [onRefresh, refreshing]);
 
   // Filter instances
   const filtered = useMemo(() => {
     let result = instances;
+
+    // Hide-offline toggle
+    if (hideOffline) {
+      result = result.filter(i => i.online);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -310,7 +339,7 @@ export default function InstancesPanel({ instances }) {
     }
 
     return result;
-  }, [instances, searchQuery, statusFilter]);
+  }, [instances, searchQuery, statusFilter, hideOffline]);
 
   // Sort instances
   const sorted = useMemo(() => {
@@ -342,7 +371,7 @@ export default function InstancesPanel({ instances }) {
   // Reset pagination when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, sortBy]);
+  }, [searchQuery, statusFilter, sortBy, hideOffline]);
 
   return (
     <div
@@ -412,7 +441,65 @@ export default function InstancesPanel({ instances }) {
           <span style={{ color: '#64748b', fontSize: 12, whiteSpace: 'nowrap' }}>Sort:</span>
           <SortDropdown value={sortBy} onChange={setSortBy} />
         </div>
+
+        {/* Hide-offline toggle */}
+        <button
+          onClick={toggleHideOffline}
+          title={hideOffline ? 'Show offline instances' : 'Hide offline instances'}
+          aria-label={hideOffline ? 'Show offline instances' : 'Hide offline instances'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 12px',
+            background: hideOffline ? '#1e3a5f' : '#1e293b',
+            border: `1px solid ${hideOffline ? '#2563eb' : '#334155'}`,
+            borderRadius: 6,
+            color: hideOffline ? '#60a5fa' : '#94a3b8',
+            fontSize: 12,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            fontWeight: hideOffline ? 600 : 400,
+          }}
+        >
+          {hideOffline ? <EyeOff size={14} /> : <Eye size={14} />}
+          {hideOffline ? 'Offline hidden' : 'Show offline'}
+        </button>
+
+        {/* Refresh button */}
+        {onRefresh && (
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title="Refresh instance list"
+            aria-label="Refresh instance list"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              background: '#1e293b',
+              border: '1px solid #334155',
+              borderRadius: 6,
+              color: refreshing ? '#475569' : '#94a3b8',
+              fontSize: 12,
+              cursor: refreshing ? 'default' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <RefreshCw
+              size={14}
+              style={{
+                animation: refreshing ? 'spin 0.8s linear infinite' : 'none',
+              }}
+            />
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        )}
       </div>
+
+      {/* Spin keyframe — injected once via a style tag */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
 
       {/* Cards */}
       <div
