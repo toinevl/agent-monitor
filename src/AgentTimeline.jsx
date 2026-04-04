@@ -136,7 +136,7 @@ function mergeBars(bars) {
 }
 
 // X-axis tick labels
-function buildTicks(windowStart, windowEnd, count = 4) {
+function buildTicks(windowStart, windowEnd, count = 5) {
   const ticks = [];
   const span  = windowEnd - windowStart;
   for (let i = 0; i <= count; i++) {

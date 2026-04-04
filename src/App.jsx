@@ -15,6 +15,7 @@ import ReportPanel from './ReportPanel';
 import InstancesPanel from './InstancesPanel';
 import Dashboard from './Dashboard';
 import AgentTimeline from './AgentTimeline';
+import SessionReplay from './SessionReplay';
 import { useAgentState } from './useAgentState';
 
 const nodeTypes = { agent: AgentNode };
@@ -103,12 +104,23 @@ function TabButton({ active, onClick, children }) {
 }
 
 export default function App() {
-  const { agents, edges: rawEdges, instances, connected, lastUpdated } = useAgentState();
+  const { agents, edges: rawEdges, instances, setInstances, connected, lastUpdated } = useAgentState();
+
+  const refreshInstances = useCallback(async () => {
+    const base = import.meta.env.VITE_BACKEND_HTTP ||
+      (import.meta.env.PROD ? '' : 'http://localhost:3001');
+    try {
+      const res = await fetch(`${base}/api/instances`);
+      if (res.ok) setInstances(await res.json());
+    } catch (err) {
+      console.error('[refresh] Failed to fetch instances:', err);
+    }
+  }, [setInstances]);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showReport, setShowReport] = useState(false);
-  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances' | 'timeline'
+  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances' | 'timeline' | 'replay'
 
   // Sync live data into React Flow
   useEffect(() => {
@@ -206,6 +218,9 @@ export default function App() {
               </span>
             )}
           </TabButton>
+          <TabButton active={activeTab === 'replay'} onClick={() => setActiveTab('replay')}>
+            🎬 Replay
+          </TabButton>
         </div>
 
         {/* Right side */}
@@ -288,9 +303,13 @@ export default function App() {
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <AgentTimeline agents={agents} snapshots={[]} />
         </div>
+      ) : activeTab === 'replay' ? (
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <SessionReplay />
+        </div>
       ) : (
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <InstancesPanel instances={instances} />
+          <InstancesPanel instances={instances} onRefresh={refreshInstances} />
         </div>
       )}
 
