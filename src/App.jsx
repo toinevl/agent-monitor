@@ -102,7 +102,18 @@ function TabButton({ active, onClick, children }) {
 }
 
 export default function App() {
-  const { agents, edges: rawEdges, instances, connected, lastUpdated } = useAgentState();
+  const { agents, edges: rawEdges, instances, setInstances, connected, lastUpdated } = useAgentState();
+
+  const refreshInstances = useCallback(async () => {
+    const base = import.meta.env.VITE_BACKEND_HTTP ||
+      (import.meta.env.PROD ? '' : 'http://localhost:3001');
+    try {
+      const res = await fetch(`${base}/api/instances`);
+      if (res.ok) setInstances(await res.json());
+    } catch (err) {
+      console.error('[refresh] Failed to fetch instances:', err);
+    }
+  }, [setInstances]);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -270,7 +281,7 @@ export default function App() {
         <Dashboard instances={instances} agents={agents} edges={rawEdges} />
       ) : (
         <div style={{ flex: 1, overflow: 'hidden' }}>
-          <InstancesPanel instances={instances} />
+          <InstancesPanel instances={instances} onRefresh={refreshInstances} />
         </div>
       )}
 

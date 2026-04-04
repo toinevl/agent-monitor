@@ -61,5 +61,5 @@ export function useAgentState() {
     return () => wsRef.current?.close();
   }, []);
 
-  return { agents, edges, instances, connected, lastUpdated };
+  return { agents, edges, instances, setInstances, connected, lastUpdated };
 }
