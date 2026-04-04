@@ -15,6 +15,7 @@ import ReportPanel from './ReportPanel';
 import InstancesPanel from './InstancesPanel';
 import Dashboard from './Dashboard';
 import AgentTimeline from './AgentTimeline';
+import SessionReplay from './SessionReplay';
 import { useAgentState } from './useAgentState';
 
 const nodeTypes = { agent: AgentNode };
@@ -119,7 +120,7 @@ export default function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showReport, setShowReport] = useState(false);
-  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances' | 'timeline'
+  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances' | 'timeline' | 'replay'
 
   // Sync live data into React Flow
   useEffect(() => {
@@ -202,6 +203,9 @@ export default function App() {
               </span>
             )}
           </TabButton>
+          <TabButton active={activeTab === 'replay'} onClick={() => setActiveTab('replay')}>
+            🎬 Replay
+          </TabButton>
         </div>
 
         {/* Right side */}
@@ -280,6 +284,10 @@ export default function App() {
         </div>
       ) : activeTab === 'dashboard' ? (
         <Dashboard instances={instances} agents={agents} edges={rawEdges} />
+      ) : activeTab === 'replay' ? (
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          <SessionReplay />
+        </div>
       ) : (
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <InstancesPanel instances={instances} onRefresh={refreshInstances} />
