@@ -3,7 +3,7 @@
  * Supports: search by label/ID, filter by status, sort by various fields
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ChevronDown, Search, X } from 'lucide-react';
 
 function ago(sec) {
@@ -340,7 +340,7 @@ export default function InstancesPanel({ instances }) {
   const offline = instances.filter(i => !i.online).length;
 
   // Reset pagination when filters change
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, statusFilter, sortBy]);
 
