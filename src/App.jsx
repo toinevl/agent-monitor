@@ -14,6 +14,7 @@ import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
 import InstancesPanel from './InstancesPanel';
 import Dashboard from './Dashboard';
+import AgentTimeline from './AgentTimeline';
 import { useAgentState } from './useAgentState';
 
 const nodeTypes = { agent: AgentNode };
@@ -118,7 +119,7 @@ export default function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showReport, setShowReport] = useState(false);
-  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances'
+  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances' | 'timeline'
 
   // Sync live data into React Flow
   useEffect(() => {
