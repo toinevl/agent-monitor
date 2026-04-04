@@ -3,7 +3,7 @@
  * Features: Line charts (trends), bar charts (costs), real-time metrics cards
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import Chart from 'chart.js/auto';
 import { useSessionStats, useSessionHistory, useCostMetrics, useMetrics } from './useAnalytics';
@@ -91,12 +91,16 @@ export default function Dashboard({ instances, agents, edges }) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [dateRange, setDateRange] = useState(7); // Days to show
 
+  // Memoize date objects — new Date instances on every render would cause
+  // useSessionHistory's useEffect to refetch in an infinite loop
+  const historyStart = useMemo(() => subDays(selectedDate, dateRange), [selectedDate, dateRange]);
+  const historyEnd = useMemo(() => endOfDay(selectedDate), [selectedDate]);
+
   // Fetch analytics data
   const { stats } = useSessionStats(selectedDate);
-  const historyStart = subDays(selectedDate, dateRange);
   const { snapshots, loading: historyLoading, error: historyError } = useSessionHistory(
     historyStart,
-    endOfDay(selectedDate)
+    historyEnd
   );
   const { dailyCost, monthlyCost, costByInstance } = useCostMetrics(instances);
   const metrics = useMetrics(instances, stats);
