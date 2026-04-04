@@ -14,6 +14,7 @@ import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
 import InstancesPanel from './InstancesPanel';
 import Dashboard from './Dashboard';
+import AgentTimeline from './AgentTimeline';
 import { useAgentState } from './useAgentState';
 
 const nodeTypes = { agent: AgentNode };
@@ -107,7 +108,7 @@ export default function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showReport, setShowReport] = useState(false);
-  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances'
+  const [activeTab, setActiveTab] = useState('sessions'); // 'sessions' | 'dashboard' | 'instances' | 'timeline'
 
   // Sync live data into React Flow
   useEffect(() => {
@@ -190,11 +191,26 @@ export default function App() {
               </span>
             )}
           </TabButton>
+          <TabButton active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')}>
+            ⏱️ Timeline
+            {agents.length > 0 && (
+              <span style={{
+                marginLeft: 6,
+                background: '#1e293b',
+                color: '#94a3b8',
+                borderRadius: 10,
+                padding: '1px 6px',
+                fontSize: 10,
+              }}>
+                {agents.length}
+              </span>
+            )}
+          </TabButton>
         </div>
 
         {/* Right side */}
         <div style={{ display: 'flex', gap: 16, marginLeft: 'auto', alignItems: 'center' }}>
-          {lastUpdated && (activeTab === 'sessions' || activeTab === 'dashboard') && (
+          {lastUpdated && (activeTab === 'sessions' || activeTab === 'dashboard' || activeTab === 'timeline') && (
             <span style={{ color: '#334155', fontSize: 11 }}>
               updated {lastUpdated.toLocaleTimeString()}
             </span>
@@ -208,7 +224,7 @@ export default function App() {
               📄 Report
             </button>
           )}
-          {(activeTab === 'sessions' || activeTab === 'dashboard') && (
+          {(activeTab === 'sessions' || activeTab === 'dashboard' || activeTab === 'timeline') && (
             <>
               <Stat label="Running" value={running} color="#4ade80" />
               <Stat label="Done"    value={done}    color="#60a5fa" />
@@ -268,6 +284,10 @@ export default function App() {
         </div>
       ) : activeTab === 'dashboard' ? (
         <Dashboard instances={instances} agents={agents} edges={rawEdges} />
+      ) : activeTab === 'timeline' ? (
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <AgentTimeline agents={agents} snapshots={[]} />
+        </div>
       ) : (
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <InstancesPanel instances={instances} />
