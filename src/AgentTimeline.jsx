@@ -146,6 +146,9 @@ function buildTicks(windowStart, windowEnd, count = 5) {
   return ticks;
 }
 
+const LABEL_WIDTH = '160px';
+const ROW_HEIGHT  = 36;
+
 export default function AgentTimeline({ agents = [], snapshots = [] }) {
   const [windowMinutes, setWindowMinutes] = useState(60);
 
@@ -318,9 +321,6 @@ export default function AgentTimeline({ agents = [], snapshots = [] }) {
     </div>
   );
 }
-
-const LABEL_WIDTH = '160px';
-const ROW_HEIGHT  = 36;
 
 function AgentRow({ entry, bars, windowStart, windowSpan }) {
   const statusColor = STATUS_COLOR[entry.status] || STATUS_COLOR.idle;

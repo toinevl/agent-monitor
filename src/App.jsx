@@ -203,6 +203,21 @@ export default function App() {
               </span>
             )}
           </TabButton>
+          <TabButton active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')}>
+            ⏱️ Timeline
+            {agents.length > 0 && (
+              <span style={{
+                marginLeft: 6,
+                background: '#1e293b',
+                color: '#94a3b8',
+                borderRadius: 10,
+                padding: '1px 6px',
+                fontSize: 10,
+              }}>
+                {agents.length}
+              </span>
+            )}
+          </TabButton>
           <TabButton active={activeTab === 'replay'} onClick={() => setActiveTab('replay')}>
             🎬 Replay
           </TabButton>
@@ -210,7 +225,7 @@ export default function App() {
 
         {/* Right side */}
         <div style={{ display: 'flex', gap: 16, marginLeft: 'auto', alignItems: 'center' }}>
-          {lastUpdated && (activeTab === 'sessions' || activeTab === 'dashboard') && (
+          {lastUpdated && (activeTab === 'sessions' || activeTab === 'dashboard' || activeTab === 'timeline') && (
             <span style={{ color: '#334155', fontSize: 11 }}>
               updated {lastUpdated.toLocaleTimeString()}
             </span>
@@ -224,7 +239,7 @@ export default function App() {
               📄 Report
             </button>
           )}
-          {(activeTab === 'sessions' || activeTab === 'dashboard') && (
+          {(activeTab === 'sessions' || activeTab === 'dashboard' || activeTab === 'timeline') && (
             <>
               <Stat label="Running" value={running} color="#4ade80" />
               <Stat label="Done"    value={done}    color="#60a5fa" />
@@ -284,6 +299,10 @@ export default function App() {
         </div>
       ) : activeTab === 'dashboard' ? (
         <Dashboard instances={instances} agents={agents} edges={rawEdges} />
+      ) : activeTab === 'timeline' ? (
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <AgentTimeline agents={agents} snapshots={[]} />
+        </div>
       ) : activeTab === 'replay' ? (
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           <SessionReplay />
