@@ -122,6 +122,8 @@ export function useMetrics(instances = [], stats = null) {
     totalActiveSessions: 0,
     totalAgents: 0,
     avgSessionDuration: 0,
+    avgAgentCount: 0,
+    maxAgentCount: 0,
   });
 
   useEffect(() => {
