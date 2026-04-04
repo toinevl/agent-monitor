@@ -40,7 +40,9 @@ if (!PUSH_SECRET || !BEACON_SECRET) {
 // ---------- Express setup ----------
 
 const app = express();
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Vite SPA uses inline module scripts; CSP configured at CDN/proxy level
+}));
 app.use(httpLogger);
 
 const allowedOrigins = process.env['allowed-origins']
