@@ -1,23 +1,44 @@
-const STATUS_COLOR = {
+import type { Agent, AgentStatus, AgentType } from './mockData';
+
+const STATUS_COLOR: Record<AgentStatus, string> = {
   running: '#4ade80',
   done:    '#60a5fa',
   idle:    '#6b7280',
   error:   '#f87171',
 };
 
-const TYPE_ICON = {
+const TYPE_ICON: Record<AgentType, string> = {
   orchestrator: '🧠',
   investigator: '🔍',
   worker:       '⚙️',
 };
 
-function ago(sec) {
-  if (sec < 60)  return `${sec}s ago`;
+function ago(sec: number): string {
+  if (sec < 60)   return `${sec}s ago`;
   if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
   return `${Math.floor(sec / 3600)}h ago`;
 }
 
-export default function LogPanel({ agent, onClose }) {
+interface LogPanelProps {
+  agent: Agent & { tokens?: number; model?: string; ageSec?: number; key?: string } | null;
+  onClose: () => void;
+}
+
+interface StatBoxProps {
+  label: string;
+  value: string;
+}
+
+function StatBox({ label, value }: StatBoxProps): JSX.Element {
+  return (
+    <div style={{ background: '#020617', borderRadius: 6, padding: '6px 10px' }}>
+      <div style={{ color: '#334155', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+      <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2, fontWeight: 600 }}>{value}</div>
+    </div>
+  );
+}
+
+export default function LogPanel({ agent, onClose }: LogPanelProps): JSX.Element {
   if (!agent) return (
     <div style={{
       background: '#0f172a',
@@ -50,7 +71,6 @@ export default function LogPanel({ agent, onClose }) {
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>{TYPE_ICON[agent.type] || '🤖'}</span>
@@ -67,17 +87,13 @@ export default function LogPanel({ agent, onClose }) {
         }}>×</button>
       </div>
 
-      {/* Stats */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16,
-      }}>
-        <StatBox label="Model"    value={agent.model || '—'} />
-        <StatBox label="Tokens"   value={(agent.tokens || 0).toLocaleString()} />
-        <StatBox label="Type"     value={agent.type} />
-        <StatBox label="Updated"  value={ago(agent.ageSec || 0)} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+        <StatBox label="Model"   value={agent.model || '—'} />
+        <StatBox label="Tokens"  value={(agent.tokens || 0).toLocaleString()} />
+        <StatBox label="Type"    value={agent.type} />
+        <StatBox label="Updated" value={ago(agent.ageSec || 0)} />
       </div>
 
-      {/* Task */}
       <div style={{
         background: '#020617',
         borderRadius: 8,
@@ -93,7 +109,6 @@ export default function LogPanel({ agent, onClose }) {
         {agent.task || 'No task info available'}
       </div>
 
-      {/* Session key */}
       <div style={{
         color: '#1e293b',
         fontSize: 10,
@@ -105,19 +120,6 @@ export default function LogPanel({ agent, onClose }) {
       }}>
         {agent.key}
       </div>
-    </div>
-  );
-}
-
-function StatBox({ label, value }) {
-  return (
-    <div style={{
-      background: '#020617',
-      borderRadius: 6,
-      padding: '6px 10px',
-    }}>
-      <div style={{ color: '#334155', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
-      <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2, fontWeight: 600 }}>{value}</div>
     </div>
   );
 }

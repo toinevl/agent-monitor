@@ -1,19 +1,41 @@
 import { Handle, Position } from '@xyflow/react';
+import type { NodeProps } from '@xyflow/react';
+import type { AgentStatus, AgentType } from './mockData';
 
-const statusColors = {
+interface AgentNodeData {
+  id: string;
+  type: AgentType;
+  label: string;
+  status: AgentStatus;
+  task: string;
+  startedAt: string | null;
+  logs: string[];
+  tokens?: number;
+  model?: string;
+  ageSec?: number;
+  key?: string;
+}
+
+interface StatusColor {
+  bg: string;
+  border: string;
+  dot: string;
+}
+
+const statusColors: Record<AgentStatus, StatusColor> = {
   running: { bg: '#1a2e1a', border: '#4ade80', dot: '#4ade80' },
   done:    { bg: '#1a1f2e', border: '#60a5fa', dot: '#60a5fa' },
   idle:    { bg: '#1e1e1e', border: '#6b7280', dot: '#6b7280' },
   error:   { bg: '#2e1a1a', border: '#f87171', dot: '#f87171' },
 };
 
-const typeIcons = {
+const typeIcons: Record<AgentType, string> = {
   orchestrator: '🧠',
   investigator: '🔍',
   worker:       '⚙️',
 };
 
-export default function AgentNode({ data, selected }) {
+export default function AgentNode({ data, selected }: NodeProps<AgentNodeData>): JSX.Element {
   const colors = statusColors[data.status] || statusColors.idle;
 
   return (
