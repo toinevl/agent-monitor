@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import {
   ReactFlow,
   Background,
@@ -12,11 +12,12 @@ import '@xyflow/react/dist/style.css';
 import AgentNode from './AgentNode';
 import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
-import InstancesPanel from './InstancesPanel';
-import Dashboard from './Dashboard';
-import AgentTimeline from './AgentTimeline';
-import SessionReplay from './SessionReplay';
 import { useAgentState } from './useAgentState';
+
+const Dashboard     = lazy(() => import('./Dashboard'));
+const AgentTimeline = lazy(() => import('./AgentTimeline'));
+const SessionReplay = lazy(() => import('./SessionReplay'));
+const InstancesPanel = lazy(() => import('./InstancesPanel'));
 
 const nodeTypes = { agent: AgentNode };
 
@@ -243,56 +244,62 @@ export default function App() {
       </div>
 
       {/* Main content */}
-      {activeTab === 'sessions' ? (
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          <div style={{ flex: 1 }}>
-            {agents.length === 0 ? (
-              <div style={{
-                height: '100%', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: 12,
-              }}>
-                <div style={{ fontSize: 32 }}>⏳</div>
-                <div style={{ fontSize: 14 }}>Waiting for agent data...</div>
-                <div style={{ fontSize: 12, color: '#1e293b' }}>
-                  {connected ? 'Connected — no active sessions yet' : 'Connecting to backend...'}
+      <Suspense fallback={
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155' }}>
+          <div style={{ fontSize: 14 }}>Loading...</div>
+        </div>
+      }>
+        {activeTab === 'sessions' ? (
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <div style={{ flex: 1 }}>
+              {agents.length === 0 ? (
+                <div style={{
+                  height: '100%', display: 'flex', alignItems: 'center',
+                  justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: 12,
+                }}>
+                  <div style={{ fontSize: 32 }}>⏳</div>
+                  <div style={{ fontSize: 14 }}>Waiting for agent data...</div>
+                  <div style={{ fontSize: 12, color: '#1e293b' }}>
+                    {connected ? 'Connected — no active sessions yet' : 'Connecting to backend...'}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                nodeTypes={nodeTypes}
-                onNodeClick={onNodeClick}
-                fitView
-                colorMode="dark"
-              >
-                <Background color="#1e293b" gap={24} />
-                <Controls />
-                <MiniMap
-                  nodeColor={n => STATUS_COLOR[n.data?.status] || '#6b7280'}
-                  style={{ background: '#0f172a', border: '1px solid #1e293b' }}
-                />
-              </ReactFlow>
-            )}
-          </div>
+              ) : (
+                <ReactFlow
+                  nodes={nodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  nodeTypes={nodeTypes}
+                  onNodeClick={onNodeClick}
+                  fitView
+                  colorMode="dark"
+                >
+                  <Background color="#1e293b" gap={24} />
+                  <Controls />
+                  <MiniMap
+                    nodeColor={n => STATUS_COLOR[n.data?.status] || '#6b7280'}
+                    style={{ background: '#0f172a', border: '1px solid #1e293b' }}
+                  />
+                </ReactFlow>
+              )}
+            </div>
 
-          <div style={{ width: 340, padding: 16, borderLeft: '1px solid #1e293b', overflow: 'hidden' }}>
-            <LogPanel agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
+            <div style={{ width: 340, padding: 16, borderLeft: '1px solid #1e293b', overflow: 'hidden' }}>
+              <LogPanel agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
+            </div>
           </div>
-        </div>
-      ) : activeTab === 'dashboard' ? (
-        <Dashboard instances={instances} agents={agents} edges={rawEdges} />
-      ) : activeTab === 'replay' ? (
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-          <SessionReplay />
-        </div>
-      ) : (
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <InstancesPanel instances={instances} onRefresh={refreshInstances} />
-        </div>
-      )}
+        ) : activeTab === 'dashboard' ? (
+          <Dashboard instances={instances} agents={agents} edges={rawEdges} />
+        ) : activeTab === 'replay' ? (
+          <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <SessionReplay />
+          </div>
+        ) : (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <InstancesPanel instances={instances} onRefresh={refreshInstances} />
+          </div>
+        )}
+      </Suspense>
 
       {showReport && <ReportPanel onClose={() => setShowReport(false)} />}
     </div>
