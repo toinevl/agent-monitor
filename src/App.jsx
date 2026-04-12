@@ -85,6 +85,8 @@ const statusCount = (agents, status) => agents.filter(a => a.status === status).
 function TabButton({ active, onClick, children }) {
   return (
     <button
+      role="tab"
+      aria-selected={active}
       onClick={onClick}
       style={{
         background: active ? '#1e293b' : 'transparent',
@@ -164,13 +166,15 @@ export default function App() {
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18, fontWeight: 700 }}>🧠 Agent Monitor</span>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '2px 10px', borderRadius: 20, fontSize: 11,
-            background: connected ? '#14532d' : '#1c1917',
-            color:      connected ? '#4ade80' : '#78716c',
-            border: `1px solid ${connected ? '#166534' : '#292524'}`,
-          }}>
+          <span
+            aria-label={connected ? 'Connection status: live' : 'Connection status: connecting'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '2px 10px', borderRadius: 20, fontSize: 11,
+              background: connected ? '#14532d' : '#1c1917',
+              color:      connected ? '#4ade80' : '#78716c',
+              border: `1px solid ${connected ? '#166534' : '#292524'}`,
+            }}>
             <span style={{
               width: 6, height: 6, borderRadius: '50%',
               background: connected ? '#4ade80' : '#78716c',
@@ -181,7 +185,7 @@ export default function App() {
         </div>
 
         {/* Tab switcher */}
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div role="tablist" style={{ display: 'flex', gap: 4 }}>
           <TabButton active={activeTab === 'sessions'} onClick={() => setActiveTab('sessions')}>
             ⚡ Sessions
           </TabButton>
@@ -231,7 +235,7 @@ export default function App() {
             </span>
           )}
           {activeTab === 'sessions' && (
-            <button onClick={() => setShowReport(true)} style={{
+            <button onClick={() => setShowReport(true)} aria-label="Generate report" style={{
               background: '#1e293b', border: '1px solid #334155',
               color: '#94a3b8', borderRadius: 8, padding: '6px 14px',
               fontSize: 12, cursor: 'pointer', fontWeight: 600,

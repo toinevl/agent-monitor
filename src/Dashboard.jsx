@@ -14,8 +14,16 @@ import { TrendingUp, DollarSign, Zap, Server, AlertCircle, RefreshCw } from 'luc
 Chart.register();
 
 function MetricCard({ icon: Icon, label, value, unit = '', color = '#4ade80', subtext = '' }) {
+  const displayValue = typeof value === 'number'
+    ? value.toLocaleString('en-US', { maximumFractionDigits: 1 })
+    : value;
+  const ariaLabel = subtext
+    ? `${label}: ${displayValue}${unit}, ${subtext}`
+    : `${label}: ${displayValue}${unit}`;
+
   return (
     <div
+      aria-label={ariaLabel}
       style={{
         background: '#0f172a',
         border: '1px solid #1e293b',
@@ -59,6 +67,8 @@ function MetricCard({ icon: Icon, label, value, unit = '', color = '#4ade80', su
 function ChartCard({ title, children, loading = false, error = null }) {
   return (
     <div
+      role="region"
+      aria-label={title}
       style={{
         background: '#0f172a',
         border: '1px solid #1e293b',
@@ -196,6 +206,7 @@ export default function Dashboard({ instances, agents, edges }) {
             <select
               value={dateRange}
               onChange={e => setDateRange(parseInt(e.target.value))}
+              aria-label="Date range"
               style={{
                 padding: '6px 10px',
                 background: '#1e293b',
@@ -213,6 +224,7 @@ export default function Dashboard({ instances, agents, edges }) {
               type="date"
               value={selectedDate.toISOString().split('T')[0]}
               onChange={e => setSelectedDate(new Date(e.target.value))}
+              aria-label="Select date"
               style={{
                 padding: '6px 10px',
                 background: '#1e293b',

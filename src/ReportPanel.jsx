@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 const BACKEND_HTTP = import.meta.env.VITE_BACKEND_HTTP ||
@@ -15,12 +15,27 @@ export default function ReportPanel({ onClose }) {
       .catch(() => setLoading(false));
   }, []);
 
+  // Close on Escape key
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000, padding: 24,
-    }}>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Session report"
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: 24,
+      }}
+    >
       <div style={{
         background: '#0f172a',
         border: '1px solid #1e293b',
@@ -51,7 +66,7 @@ export default function ReportPanel({ onClose }) {
               </div>
             )}
           </div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} autoFocus aria-label="Close report" style={{
             background: 'none', border: 'none', color: '#475569',
             cursor: 'pointer', fontSize: 22, lineHeight: 1,
           }}>×</button>

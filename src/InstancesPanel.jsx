@@ -39,6 +39,8 @@ function InstanceCard({ inst }) {
 
   return (
     <div
+      role="article"
+      aria-label={inst.label || inst.instanceId}
       style={{
         background: '#0f172a',
         border: `1px solid ${online ? '#166534' : '#2e1a1a'}`,
@@ -202,6 +204,7 @@ function SearchInput({ value, onChange, placeholder = 'Search instances...' }) {
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
+        aria-label="Search instances"
         style={{
           width: '100%',
           padding: '6px 10px 6px 32px',
@@ -216,6 +219,7 @@ function SearchInput({ value, onChange, placeholder = 'Search instances...' }) {
       {value && (
         <button
           onClick={() => onChange('')}
+          aria-label="Clear search"
           style={{
             position: 'absolute',
             right: 8,
@@ -246,6 +250,7 @@ function SortDropdown({ value, onChange }) {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
+        aria-label="Sort instances"
         style={{
           width: '100%',
           padding: '6px 10px',
@@ -397,7 +402,7 @@ export default function InstancesPanel({ instances, onRefresh }) {
         <span style={{ color: '#475569', fontSize: 13 }}>Fleet overview</span>
         <span style={{ color: '#4ade80', fontWeight: 700 }}>{online} online</span>
         {offline > 0 && <span style={{ color: '#f87171', fontWeight: 700 }}>{offline} offline</span>}
-        <span style={{ color: '#334155', fontSize: 12, marginLeft: 'auto' }}>
+        <span style={{ color: '#475569', fontSize: 12, marginLeft: 'auto' }}>
           {sorted.length}/{instances.length} instance
           {instances.length !== 1 ? 's' : ''}
         </span>
@@ -421,6 +426,7 @@ export default function InstancesPanel({ instances, onRefresh }) {
           <select
             value={statusFilter}
             onChange={e => setStatusFilter(e.target.value)}
+            aria-label="Filter by status"
             style={{
               padding: '6px 10px',
               background: '#1e293b',
@@ -522,7 +528,7 @@ export default function InstancesPanel({ instances, onRefresh }) {
               alignItems: 'center',
               justifyContent: 'center',
               height: 200,
-              color: '#334155',
+              color: '#475569',
               gap: 12,
             }}
           >
@@ -556,6 +562,7 @@ export default function InstancesPanel({ instances, onRefresh }) {
           <button
             onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
             disabled={currentPage === 1}
+            aria-label="Previous page"
             style={{
               padding: '4px 12px',
               background: currentPage === 1 ? '#1e293b' : '#334155',
@@ -576,6 +583,7 @@ export default function InstancesPanel({ instances, onRefresh }) {
           <button
             onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
+            aria-label="Next page"
             style={{
               padding: '4px 12px',
               background: currentPage === totalPages ? '#1e293b' : '#334155',
