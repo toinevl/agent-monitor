@@ -61,16 +61,12 @@ describe('App', () => {
   it('switches to Dashboard tab without crashing', async () => {
     render(<App />);
     fireEvent.click(screen.getByText(/Dashboard/));
-    await waitFor(() =>
-      expect(screen.getByText('📊 Analytics Dashboard')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText('📊 Analytics Dashboard')).toBeInTheDocument());
   });
 
   it('switches to Instances tab without crashing', async () => {
     render(<App />);
     fireEvent.click(screen.getByText(/Instances/));
-    await waitFor(() =>
-      expect(screen.getByText('No instances registered yet')).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText('No instances registered yet')).toBeInTheDocument());
   });
 });
