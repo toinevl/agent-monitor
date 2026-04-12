@@ -1,8 +1,8 @@
+import React from 'react';
 import { Handle, Position } from '@xyflow/react';
-import type { NodeProps } from '@xyflow/react';
 import type { AgentStatus, AgentType } from './mockData';
 
-interface AgentNodeData {
+export interface AgentNodeData extends Record<string, unknown> {
   id: string;
   type: AgentType;
   label: string;
@@ -35,8 +35,10 @@ const typeIcons: Record<AgentType, string> = {
   worker:       '⚙️',
 };
 
-export default function AgentNode({ data, selected }: NodeProps<AgentNodeData>): JSX.Element {
-  const colors = statusColors[data.status] || statusColors.idle;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default function AgentNode({ data, selected }: { data: any; selected?: boolean }): React.ReactElement {
+  const d = data as AgentNodeData;
+  const colors = statusColors[d.status] || statusColors.idle;
 
   return (
     <div style={{
@@ -51,42 +53,25 @@ export default function AgentNode({ data, selected }: NodeProps<AgentNodeData>):
       <Handle type="target" position={Position.Top} style={{ background: colors.border }} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-        <span style={{ fontSize: 18 }}>{typeIcons[data.type] || '🤖'}</span>
-        <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 14 }}>{data.label}</span>
+        <span style={{ fontSize: 18 }}>{typeIcons[d.type] || '🤖'}</span>
+        <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 14 }}>{d.label}</span>
         <span style={{
-          marginLeft: 'auto',
-          width: 8, height: 8,
-          borderRadius: '50%',
-          background: colors.dot,
-          boxShadow: `0 0 6px ${colors.dot}`,
+          marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%',
+          background: colors.dot, boxShadow: `0 0 6px ${colors.dot}`,
         }} />
       </div>
 
-      <div style={{
-        color: '#94a3b8',
-        fontSize: 11,
-        lineHeight: 1.4,
-        maxWidth: 200,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}>
-        {data.task}
+      <div style={{ color: '#94a3b8', fontSize: 11, lineHeight: 1.4, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {d.task}
       </div>
 
       <div style={{
-        marginTop: 6,
-        display: 'inline-block',
-        padding: '2px 8px',
-        borderRadius: 20,
-        fontSize: 10,
-        fontWeight: 600,
-        background: `${colors.dot}22`,
-        color: colors.dot,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
+        marginTop: 6, display: 'inline-block', padding: '2px 8px', borderRadius: 20,
+        fontSize: 10, fontWeight: 600,
+        background: `${colors.dot}22`, color: colors.dot,
+        textTransform: 'uppercase', letterSpacing: 1,
       }}>
-        {data.status}
+        {d.status}
       </div>
 
       <Handle type="source" position={Position.Bottom} style={{ background: colors.border }} />

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
@@ -7,10 +8,10 @@ import {
   useNodesState,
   useEdgesState,
 } from '@xyflow/react';
-import type { Node, Edge as FlowEdge, NodeMouseHandler } from '@xyflow/react';
+import type { Edge as FlowEdge, NodeMouseHandler, NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import AgentNode from './AgentNode';
+import AgentNode, { type AgentNodeData } from './AgentNode';
 import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
 import InstancesPanel from './InstancesPanel';
@@ -20,7 +21,7 @@ import SessionReplay from './SessionReplay';
 import { useAgentState } from './useAgentState';
 import type { Agent, AgentStatus, Edge } from './mockData';
 
-const nodeTypes = { agent: AgentNode };
+const nodeTypes: NodeTypes = { agent: AgentNode as NodeTypes[string] };
 
 const STATUS_COLOR: Record<AgentStatus, string> = {
   running: '#4ade80',
@@ -34,7 +35,8 @@ const NODE_HEIGHT = 90;
 const H_GAP = 40;
 const V_GAP = 120;
 
-function rowLayout(agents: Agent[], y: number): Node[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowLayout(agents: Agent[], y: number): any[] {
   const total    = agents.length;
   const rowWidth = total * NODE_WIDTH + (total - 1) * H_GAP;
   return agents.map((agent, idx) => ({
@@ -45,11 +47,13 @@ function rowLayout(agents: Agent[], y: number): Node[] {
   }));
 }
 
-function buildNodes(agents: Agent[]): Node[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildNodes(agents: Agent[]): any[] {
   const orchestrators = agents.filter(a => a.type === 'orchestrator');
   const investigators = agents.filter(a => a.type === 'investigator');
   const workers       = agents.filter(a => a.type === 'worker');
-  const rows: Node[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows: any[] = [];
   let y = 0;
   if (orchestrators.length) { rows.push(...rowLayout(orchestrators, y)); y += NODE_HEIGHT + V_GAP; }
   if (investigators.length) { rows.push(...rowLayout(investigators, y)); y += NODE_HEIGHT + V_GAP; }
@@ -78,7 +82,7 @@ interface TabButtonProps {
   children: React.ReactNode;
 }
 
-function TabButton({ active, onClick, children }: TabButtonProps): JSX.Element {
+function TabButton({ active, onClick, children }: TabButtonProps): React.ReactElement {
   return (
     <button onClick={onClick} style={{
       background: active ? '#1e293b' : 'transparent',
@@ -98,7 +102,7 @@ interface StatProps {
   color: string;
 }
 
-function Stat({ label, value, color }: StatProps): JSX.Element {
+function Stat({ label, value, color }: StatProps): React.ReactElement {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
@@ -107,7 +111,7 @@ function Stat({ label, value, color }: StatProps): JSX.Element {
   );
 }
 
-export default function App(): JSX.Element {
+export default function App(): React.ReactElement {
   const { agents, edges: rawEdges, instances, setInstances, connected, lastUpdated } = useAgentState();
 
   const refreshInstances = useCallback(async (): Promise<void> => {
@@ -121,8 +125,10 @@ export default function App(): JSX.Element {
     }
   }, [setInstances]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [showReport, setShowReport]       = useState<boolean>(false);
   const [activeTab, setActiveTab]         = useState<TabId>('sessions');

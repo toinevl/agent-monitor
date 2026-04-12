@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * Dashboard — Modern analytics dashboard with charts, metrics, and insights
  */
@@ -24,7 +25,7 @@ interface MetricCardProps {
   subtext?: string;
 }
 
-function MetricCard({ icon: Icon, label, value, unit = '', color = '#4ade80', subtext = '' }: MetricCardProps): JSX.Element {
+function MetricCard({ icon: Icon, label, value, unit = '', color = '#4ade80', subtext = '' }: MetricCardProps): React.ReactElement {
   return (
     <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
       <div style={{ width: 48, height: 48, borderRadius: 10, background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -49,7 +50,7 @@ interface ChartCardProps {
   error?: string | null;
 }
 
-function ChartCard({ title, children, loading = false, error = null }: ChartCardProps): JSX.Element {
+function ChartCard({ title, children, loading = false, error = null }: ChartCardProps): React.ReactElement {
   return (
     <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: '24px', minHeight: 400, display: 'flex', flexDirection: 'column' }}>
       <div style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 20 }}>{title}</div>
@@ -79,7 +80,7 @@ interface SnapshotItem {
   agentCount: number;
 }
 
-export default function Dashboard({ instances, agents, edges: _edges }: DashboardProps): JSX.Element {
+export default function Dashboard({ instances, agents, edges: _edges }: DashboardProps): React.ReactElement {
   void agents; // used by parent for live data
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dateRange, setDateRange]       = useState<number>(7);
@@ -92,7 +93,7 @@ export default function Dashboard({ instances, agents, edges: _edges }: Dashboar
   const { dailyCost, monthlyCost, costByInstance }                  = useCostMetrics(instances);
   const metrics                                                     = useMetrics(instances, stats);
 
-  const agentTrendData = (snapshots as SnapshotItem[])
+  const agentTrendData = (snapshots as unknown as SnapshotItem[])
     .sort((a, b) => a.timestamp - b.timestamp)
     .reduce<{ labels: string[]; data: number[] }>((acc, snap) => {
       const hour = new Date(snap.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });

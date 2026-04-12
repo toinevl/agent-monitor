@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * InstancesPanel — Fleet overview with search, filter, sort, and pagination
  */
@@ -26,7 +27,7 @@ interface BadgeProps {
   bg?: string;
 }
 
-function Badge({ children, color = '#6b7280', bg }: BadgeProps): JSX.Element {
+function Badge({ children, color = '#6b7280', bg }: BadgeProps): React.ReactElement {
   return (
     <span style={{
       display: 'inline-block', padding: '2px 8px', borderRadius: 20,
@@ -46,7 +47,7 @@ interface MetaRowProps {
   span?: boolean;
 }
 
-function MetaRow({ icon, label, value, span }: MetaRowProps): JSX.Element {
+function MetaRow({ icon, label, value, span }: MetaRowProps): React.ReactElement {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, gridColumn: span ? '1 / -1' : undefined, minWidth: 0, overflow: 'hidden' }}>
       <span style={{ fontSize: 12, flexShrink: 0 }}>{icon}</span>
@@ -70,7 +71,7 @@ interface InstanceCardProps {
   inst: ExtendedInstance;
 }
 
-function InstanceCard({ inst }: InstanceCardProps): JSX.Element {
+function InstanceCard({ inst }: InstanceCardProps): React.ReactElement {
   const online = inst.online;
   const statusColor = online ? '#4ade80' : '#f87171';
 
@@ -123,7 +124,7 @@ interface SearchInputProps {
   placeholder?: string;
 }
 
-function SearchInput({ value, onChange, placeholder = 'Search instances...' }: SearchInputProps): JSX.Element {
+function SearchInput({ value, onChange, placeholder = 'Search instances...' }: SearchInputProps): React.ReactElement {
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 200 }}>
       <Search size={16} style={{ position: 'absolute', left: 10, color: '#64748b' }} />
@@ -148,7 +149,7 @@ interface SortDropdownProps {
   onChange: (v: SortOption) => void;
 }
 
-function SortDropdown({ value, onChange }: SortDropdownProps): JSX.Element {
+function SortDropdown({ value, onChange }: SortDropdownProps): React.ReactElement {
   const options: { label: string; value: SortOption }[] = [
     { label: 'Last seen (newest)',  value: 'lastSeen' },
     { label: 'Status (online first)', value: 'status' },
@@ -177,7 +178,7 @@ interface InstancesPanelProps {
   onRefresh: () => Promise<void>;
 }
 
-export default function InstancesPanel({ instances, onRefresh }: InstancesPanelProps): JSX.Element {
+export default function InstancesPanel({ instances, onRefresh }: InstancesPanelProps): React.ReactElement {
   const [searchQuery,  setSearchQuery]  = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
   const [sortBy,       setSortBy]       = useState<SortOption>('lastSeen');

@@ -1,3 +1,4 @@
+import React from 'react';
 import type { Agent, AgentStatus, AgentType } from './mockData';
 
 const STATUS_COLOR: Record<AgentStatus, string> = {
@@ -29,7 +30,7 @@ interface StatBoxProps {
   value: string;
 }
 
-function StatBox({ label, value }: StatBoxProps): JSX.Element {
+function StatBox({ label, value }: StatBoxProps): React.ReactElement {
   return (
     <div style={{ background: '#020617', borderRadius: 6, padding: '6px 10px' }}>
       <div style={{ color: '#334155', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
@@ -38,7 +39,7 @@ function StatBox({ label, value }: StatBoxProps): JSX.Element {
   );
 }
 
-export default function LogPanel({ agent, onClose }: LogPanelProps): JSX.Element {
+export default function LogPanel({ agent, onClose }: LogPanelProps): React.ReactElement {
   if (!agent) return (
     <div style={{
       background: '#0f172a',

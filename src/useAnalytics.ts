@@ -13,6 +13,7 @@ export interface SessionStats {
 export interface SessionSnapshot {
   sessionId: string;
   date: string;
+  timestamp: number;
   agentCount: number;
   tokens?: number;
   cost?: number;

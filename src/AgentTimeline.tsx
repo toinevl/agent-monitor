@@ -1,3 +1,4 @@
+import React from 'react';
 /**
  * AgentTimeline — Gantt-style view of agent activity over time.
  * Props: { agents, snapshots }
@@ -151,7 +152,7 @@ interface AgentTimelineProps {
   snapshots?: Snapshot[];
 }
 
-export default function AgentTimeline({ agents = [], snapshots = [] }: AgentTimelineProps): JSX.Element {
+export default function AgentTimeline({ agents = [], snapshots = [] }: AgentTimelineProps): React.ReactElement {
   const [windowMinutes, setWindowMinutes] = useState<number>(60);
 
   const now         = Date.now();
@@ -232,7 +233,7 @@ interface AgentRowProps {
   windowSpan: number;
 }
 
-function AgentRow({ entry, bars, windowStart, windowSpan }: AgentRowProps): JSX.Element {
+function AgentRow({ entry, bars, windowStart, windowSpan }: AgentRowProps): React.ReactElement {
   const statusColor = STATUS_COLOR[entry.status] || STATUS_COLOR.idle;
   return (
     <div style={{ display: 'flex', alignItems: 'center', height: ROW_HEIGHT, marginBottom: 4 }}>

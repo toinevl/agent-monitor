@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ReactFlow,
@@ -6,12 +7,12 @@ import {
   useNodesState,
   useEdgesState,
 } from '@xyflow/react';
-import type { Node, Edge as FlowEdge } from '@xyflow/react';
+import type { NodeTypes } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import AgentNode from './AgentNode';
+import AgentNode, { type AgentNodeData } from './AgentNode';
 import type { Agent, Edge } from './mockData';
 
-const nodeTypes = { agent: AgentNode };
+const nodeTypes: NodeTypes = { agent: AgentNode as NodeTypes[string] };
 
 const base = import.meta.env.VITE_BACKEND_HTTP ||
   (import.meta.env.PROD ? '' : 'http://localhost:3001');
@@ -21,7 +22,8 @@ const NODE_HEIGHT = 90;
 const H_GAP = 40;
 const V_GAP = 120;
 
-function rowLayout(agents: Agent[], y: number): Node[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowLayout(agents: Agent[], y: number): any[] {
   const total = agents.length;
   const rowWidth = total * NODE_WIDTH + (total - 1) * H_GAP;
   return agents.map((agent, idx) => ({
@@ -32,11 +34,13 @@ function rowLayout(agents: Agent[], y: number): Node[] {
   }));
 }
 
-function buildNodes(agents: Agent[]): Node[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildNodes(agents: Agent[]): any[] {
   const orchestrators = agents.filter(a => a.type === 'orchestrator');
   const investigators = agents.filter(a => a.type === 'investigator');
   const workers       = agents.filter(a => a.type === 'worker');
-  const rows: Node[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rows: any[] = [];
   let y = 0;
   if (orchestrators.length) { rows.push(...rowLayout(orchestrators, y)); y += NODE_HEIGHT + V_GAP; }
   if (investigators.length) { rows.push(...rowLayout(investigators, y)); y += NODE_HEIGHT + V_GAP; }
@@ -44,7 +48,8 @@ function buildNodes(agents: Agent[]): Node[] {
   return rows;
 }
 
-function buildEdges(edges: Edge[]): FlowEdge[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildEdges(edges: Edge[]): any[] {
   return edges.map(e => ({
     ...e,
     animated: true,
@@ -61,7 +66,7 @@ interface CtrlBtnProps {
   children: React.ReactNode;
 }
 
-function CtrlBtn({ onClick, title, children, disabled }: CtrlBtnProps): JSX.Element {
+function CtrlBtn({ onClick, title, children, disabled }: CtrlBtnProps): React.ReactElement {
   return (
     <button onClick={onClick} title={title} disabled={disabled} style={{
       background: '#1e293b', border: '1px solid #334155',
@@ -92,7 +97,7 @@ interface EmptyStateProps {
   color?: string;
 }
 
-function EmptyState({ icon, message, color = '#334155' }: EmptyStateProps): JSX.Element {
+function EmptyState({ icon, message, color = '#334155' }: EmptyStateProps): React.ReactElement {
   return (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color }}>
       <div style={{ fontSize: 36 }}>{icon}</div>
@@ -101,7 +106,7 @@ function EmptyState({ icon, message, color = '#334155' }: EmptyStateProps): JSX.
   );
 }
 
-export default function SessionReplay(): JSX.Element {
+export default function SessionReplay(): React.ReactElement {
   const today = new Date().toISOString().slice(0, 10);
 
   const [date, setDate]         = useState<string>(today);
@@ -111,8 +116,10 @@ export default function SessionReplay(): JSX.Element {
   const [cursor, setCursor]     = useState<number>(0);
   const [playing, setPlaying]   = useState<boolean>(false);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

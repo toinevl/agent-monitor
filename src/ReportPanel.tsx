@@ -50,7 +50,7 @@ const mdComponents: Components = {
   hr: () => <hr style={{ border: 'none', borderTop: '1px solid #1e293b', margin: '20px 0' }} />,
 };
 
-export default function ReportPanel({ onClose }: ReportPanelProps): JSX.Element {
+export default function ReportPanel({ onClose }: ReportPanelProps): React.ReactElement {
   const [report, setReport]   = useState<Report | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
