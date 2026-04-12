@@ -13,14 +13,15 @@ const DATA_DIR = join(__dir, '../data');
 
 // ---------- Backend selection ----------
 
-const USE_AZURE = !!process.env.AZURE_STORAGE_CONNECTION_STRING;
-const USE_JSON = !USE_AZURE; // Fallback
+const CONNECTION_STRING_SET = !!process.env.AZURE_STORAGE_CONNECTION_STRING;
+let USE_AZURE = CONNECTION_STRING_SET;
+let USE_JSON = !USE_AZURE; // Fallback
 
 logger.info(
   {
     backend: USE_AZURE ? 'Azure Table Storage' : 'JSON (dev/testing)',
   },
-  '[db] Storage initialized'
+  '[db] Storage backend selected'
 );
 
 // ---------- Azure Table Storage setup ----------
@@ -30,7 +31,7 @@ let azureTableClients = {};
 if (USE_AZURE) {
   try {
     const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
-    const serviceClient = new TableServiceClient(connectionString);
+    const serviceClient = TableServiceClient.fromConnectionString(connectionString);
 
     // Create tables if they don't exist
     const tableNames = ['OpenClawInstances', 'AgentSessions'];
@@ -38,13 +39,16 @@ if (USE_AZURE) {
       serviceClient.createTable(tableName).catch(() => {
         // Ignore "already exists" errors
       });
-      azureTableClients[tableName] = new TableClient(connectionString, tableName);
+      azureTableClients[tableName] = TableClient.fromConnectionString(connectionString, tableName);
     }
 
     logger.info(`Azure Table Storage: ${tableNames.length} tables ready`);
   } catch (err) {
-    logger.error(err, 'Failed to initialize Azure Table Storage');
-    process.exit(1);
+    logger.error(err, 'Failed to initialize Azure Table Storage, falling back to JSON');
+    azureTableClients = {};
+    USE_AZURE = false;
+    USE_JSON = true;
+    // Don't exit — fall back to JSON storage so server keeps running
   }
 }
 

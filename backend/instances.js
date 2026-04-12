@@ -25,7 +25,7 @@ const useJSON = !useAzure; // Fallback
 let tableClient;
 
 if (useAzure) {
-  tableClient = new TableClient(CONNECTION_STRING, TABLE_NAME);
+  tableClient = TableClient.fromConnectionString(CONNECTION_STRING, TABLE_NAME);
   const svc = TableServiceClient.fromConnectionString(CONNECTION_STRING);
   svc.createTable(TABLE_NAME).catch(() => {}); // ignore "already exists"
   logger.info('[instances] Using Azure Table Storage');

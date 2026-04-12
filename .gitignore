@@ -13,3 +13,4 @@ skills/beacon/beacon-config.json
 
 # Instance data store (runtime, not committed)
 data/
+.claude/
