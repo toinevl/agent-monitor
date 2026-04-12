@@ -1,4 +1,24 @@
-export const mockAgents = [
+export type AgentStatus = 'running' | 'done' | 'idle' | 'error';
+export type AgentType = 'orchestrator' | 'investigator' | 'worker';
+
+export interface Agent {
+  id: string;
+  type: AgentType;
+  label: string;
+  status: AgentStatus;
+  task: string;
+  startedAt: string | null;
+  logs: string[];
+}
+
+export interface Edge {
+  id: string;
+  source: string;
+  target: string;
+  label: string;
+}
+
+export const mockAgents: Agent[] = [
   {
     id: 'orchestrator-1',
     type: 'orchestrator',
@@ -56,7 +76,7 @@ export const mockAgents = [
   },
 ];
 
-export const mockEdges = [
+export const mockEdges: Edge[] = [
   { id: 'e1', source: 'orchestrator-1', target: 'investigator-1', label: 'assigned' },
   { id: 'e2', source: 'orchestrator-1', target: 'worker-1', label: 'assigned' },
   { id: 'e3', source: 'orchestrator-1', target: 'worker-2', label: 'spawned' },
