@@ -15,12 +15,12 @@ import AgentNode, { type AgentNodeData } from './AgentNode';
 import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
 import { useAgentState } from './useAgentState';
+import type { Agent, AgentStatus, Edge } from './mockData';
 
 const InstancesPanel  = lazy(() => import('./InstancesPanel'));
 const Dashboard       = lazy(() => import('./Dashboard'));
 const AgentTimeline   = lazy(() => import('./AgentTimeline'));
 const SessionReplay   = lazy(() => import('./SessionReplay'));
-import type { Agent, AgentStatus, Edge } from './mockData';
 
 const nodeTypes: NodeTypes = { agent: AgentNode as NodeTypes[string] };
 
