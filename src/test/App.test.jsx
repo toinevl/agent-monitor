@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import App from '../App';
 
@@ -58,15 +58,15 @@ describe('App', () => {
     expect(screen.getByText('Waiting for agent data...')).toBeInTheDocument();
   });
 
-  it('switches to Dashboard tab without crashing', () => {
+  it('switches to Dashboard tab without crashing', async () => {
     render(<App />);
     fireEvent.click(screen.getByText(/Dashboard/));
-    expect(screen.getByText('📊 Analytics Dashboard')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('📊 Analytics Dashboard')).toBeInTheDocument());
   });
 
-  it('switches to Instances tab without crashing', () => {
+  it('switches to Instances tab without crashing', async () => {
     render(<App />);
     fireEvent.click(screen.getByText(/Instances/));
-    expect(screen.getByText('No instances registered yet')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('No instances registered yet')).toBeInTheDocument());
   });
 });
