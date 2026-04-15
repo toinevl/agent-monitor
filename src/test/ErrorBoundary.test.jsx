@@ -42,18 +42,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('clears the error and re-renders children when "Try again" is clicked', () => {
-    // Use a wrapper component so we can control the shouldThrow prop after mount
-    function Wrapper() {
-      const [shouldThrow, setShouldThrow] = React.useState(true);
-      return (
-        <ErrorBoundary>
-          <Bomb shouldThrow={shouldThrow} />
-          {/* Expose a reset trigger outside the boundary so we can flip the flag */}
-          <button onClick={() => setShouldThrow(false)}>fix</button>
-        </ErrorBoundary>
-      );
-    }
-
     // Simpler approach: render without a throw first, confirm healthy state;
     // the boundary's "Try again" resets its own state so child must not re-throw.
     const { rerender } = render(

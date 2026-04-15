@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useState, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
@@ -14,12 +14,13 @@ import '@xyflow/react/dist/style.css';
 import AgentNode, { type AgentNodeData } from './AgentNode';
 import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
-import InstancesPanel from './InstancesPanel';
-import Dashboard from './Dashboard';
-import AgentTimeline from './AgentTimeline';
-import SessionReplay from './SessionReplay';
 import { useAgentState } from './useAgentState';
 import type { Agent, AgentStatus, Edge } from './mockData';
+
+const InstancesPanel  = lazy(() => import('./InstancesPanel'));
+const Dashboard       = lazy(() => import('./Dashboard'));
+const AgentTimeline   = lazy(() => import('./AgentTimeline'));
+const SessionReplay   = lazy(() => import('./SessionReplay'));
 
 const nodeTypes: NodeTypes = { agent: AgentNode as NodeTypes[string] };
 
@@ -228,6 +229,11 @@ export default function App(): React.ReactElement {
       </div>
 
       {/* Main content */}
+      <Suspense fallback={
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155' }}>
+          <div style={{ fontSize: 14 }}>Loading...</div>
+        </div>
+      }>
       {activeTab === 'sessions' ? (
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           <div style={{ flex: 1 }}>
@@ -266,6 +272,8 @@ export default function App(): React.ReactElement {
           <InstancesPanel instances={instances} onRefresh={refreshInstances} />
         </div>
       )}
+
+      </Suspense>
 
       {showReport && <ReportPanel onClose={() => setShowReport(false)} />}
     </div>
