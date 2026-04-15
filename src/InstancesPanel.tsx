@@ -251,7 +251,7 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
           <SortDropdown value={sortBy} onChange={setSortBy} />
         </div>
 
-        <button onClick={toggleHideOffline} title={hideOffline ? 'Show offline instances' : 'Hide offline instances'} style={{
+        <button onClick={toggleHideOffline} aria-label={hideOffline ? 'Show offline instances' : 'Hide offline instances'} title={hideOffline ? 'Show offline instances' : 'Hide offline instances'} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
           background: hideOffline ? '#1e3a5f' : '#1e293b',
           border: `1px solid ${hideOffline ? '#2563eb' : '#334155'}`,
@@ -262,7 +262,7 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
           {hideOffline ? 'Offline hidden' : 'Show offline'}
         </button>
 
-        <button onClick={handleRefresh} disabled={refreshing} title="Refresh instance list" style={{
+        {onRefresh && <button onClick={handleRefresh} disabled={refreshing} aria-label="Refresh instance list" title="Refresh instance list" style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
           background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
           color: refreshing ? '#475569' : '#94a3b8', fontSize: 12,
@@ -270,7 +270,7 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
         }}>
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
           {refreshing ? 'Refreshing…' : 'Refresh'}
-        </button>
+        </button>}
       </div>
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

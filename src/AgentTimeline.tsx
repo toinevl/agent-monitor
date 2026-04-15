@@ -84,7 +84,7 @@ function buildTimelineEntries(
   for (const agent of agents) {
     const id = agent.id;
     if (!agentMap.has(id)) {
-      agentMap.set(id, { id, name: agent.label || agent.id, status: agent.status, bars: [] });
+      agentMap.set(id, { id, name: agent.name || agent.label || agent.id, status: agent.status, bars: [] });
     } else {
       agentMap.get(id)!.status = agent.status;
     }
