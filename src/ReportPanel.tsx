@@ -67,17 +67,21 @@ export default function ReportPanel({ onClose }: ReportPanelProps): React.ReactE
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       zIndex: 1000, padding: 24,
     }}>
-      <div style={{
-        background: '#0f172a',
-        border: '1px solid #1e293b',
-        borderRadius: 16,
-        width: '100%',
-        maxWidth: 860,
-        maxHeight: '90vh',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Session report"
+        style={{
+          background: '#0f172a',
+          border: '1px solid #1e293b',
+          borderRadius: 16,
+          width: '100%',
+          maxWidth: 860,
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
         <div style={{
           padding: '16px 24px',
           borderBottom: '1px solid #1e293b',
@@ -96,7 +100,7 @@ export default function ReportPanel({ onClose }: ReportPanelProps): React.ReactE
               </div>
             )}
           </div>
-          <button onClick={onClose} style={{
+          <button onClick={onClose} autoFocus aria-label="Close report" style={{
             background: 'none', border: 'none', color: '#475569',
             cursor: 'pointer', fontSize: 22, lineHeight: 1,
           }}>×</button>
