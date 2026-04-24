@@ -13,8 +13,10 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 
 # Build frontend (backend URL = same origin, relative paths)
+ARG BUILD_SHA=""
 ENV VITE_BACKEND_HTTP=""
 ENV VITE_BACKEND_WS=""
+ENV VITE_BUILD_SHA=$BUILD_SHA
 RUN pnpm run build
 
 # ---- Runtime stage ----

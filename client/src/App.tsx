@@ -225,6 +225,11 @@ export default function App(): React.ReactElement {
               <Stat label="Total"   value={instances.length}                   color="#f1f5f9" />
             </>
           )}
+          {import.meta.env.VITE_BUILD_SHA && (
+            <span style={{ color: '#334155', fontSize: 11, fontFamily: 'monospace' }}>
+              #{(import.meta.env.VITE_BUILD_SHA as string).slice(0, 7)}
+            </span>
+          )}
         </div>
       </div>
 
