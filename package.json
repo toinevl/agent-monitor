@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.29.3",
   "scripts": {
     "dev": "pnpm --parallel -r dev",
-    "build": "pnpm --filter client build",
+    "build": "pnpm --filter agent-monitor-client build",
     "test": "pnpm -r test",
     "lint": "pnpm -r lint"
   }
