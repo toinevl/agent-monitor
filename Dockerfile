@@ -6,8 +6,11 @@ WORKDIR /app
 # Install pnpm
 RUN npm install -g pnpm@10.29.3
 
-# Copy frontend files
-COPY package.json pnpm-lock.yaml* ./
+# Copy workspace manifests before install for layer caching
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY client/package.json ./client/
+COPY backend/package.json ./backend/
+COPY local-pusher/package.json ./local-pusher/
 RUN pnpm install --frozen-lockfile
 
 COPY . .
@@ -31,8 +34,8 @@ RUN cd backend && npm install --production
 # Copy backend source
 COPY backend/ ./backend/
 
-# Copy built frontend
-COPY --from=builder /app/dist ./dist
+# Copy built frontend (vite outputs to client/dist)
+COPY --from=builder /app/client/dist ./dist
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
