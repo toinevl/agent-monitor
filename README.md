@@ -14,14 +14,14 @@
 
 Agent Monitor gives you complete visibility into your OpenClaw deployment:
 
-| Feature | Description |
-|---------|-------------|
-| **Live Sessions Graph** | Real-time visualization of agent orchestration with status indicators |
-| **Fleet Management** | Search, filter, sort, and paginate across all OpenClaw instances |
-| **Session History** | Time-series storage of agent sessions with daily analytics |
-| **Instance Beacon** | Automatic heartbeat registration for every instance with version tracking |
-| **Analytics Dashboard** | Modern dashboard with charts, metrics, and cost analysis |
-| **Briefing Reports** | Latest AI-generated reports from completed pipelines |
+| Feature                 | Description                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| **Live Sessions Graph** | Real-time visualization of agent orchestration with status indicators     |
+| **Fleet Management**    | Search, filter, sort, and paginate across all OpenClaw instances          |
+| **Session History**     | Time-series storage of agent sessions with daily analytics                |
+| **Instance Beacon**     | Automatic heartbeat registration for every instance with version tracking |
+| **Analytics Dashboard** | Modern dashboard with charts, metrics, and cost analysis                  |
+| **Briefing Reports**    | Latest AI-generated reports from completed pipelines                      |
 
 **Dashboard Features:**
 
@@ -74,11 +74,30 @@ Agent Monitor gives you complete visibility into your OpenClaw deployment:
 - 📚 **[Full Documentation](./DOCUMENTATION.md)** — Complete guide covering all features
 - 🚀 **[Backend README](./backend/README.md)** — API reference and backend setup
 - ☁️ **[Azure Deployment Guide](./AZURE_DEPLOYMENT.md)** — Deploy to Azure Container Apps with GitHub Actions
+- 🧭 **[Onboarding Guide](./DOCUMENTATION.md#agent-onboarding)** — Fast, cloud-native agent onboarding
 - 📋 **[Changelog](./CHANGELOG.md)** — All releases and features by phase
 - 💻 **[Local Setup](./DOCUMENTATION.md#installation)** — Get running in 5 minutes
 - 🔌 **[Connecting Agents](./DOCUMENTATION.md#openclaw-integration)** — Linux, Windows, Docker sidecar
 
 ---
+
+## Agent Onboarding
+
+Agent Monitor is designed to make OpenClaw instance onboarding easy and fault tolerant.
+
+### Cloud-native onboarding
+
+- Deploy the backend as a managed container application.
+- Store secrets in Azure Container Apps or your cloud provider secret store.
+- Use the `local-pusher` sidecar for session state forwarding in containerized OpenClaw deployments.
+- Use `local-pusher/onboard-check.js` to validate the configuration before instances register.
+
+### Quick onboarding checklist
+
+1. Deploy the backend with `AZURE_DEPLOYMENT.md`.
+2. Configure `INSTANCE_ID`, `CENTRAL_URL`, and `BEACON_SECRET` for each instance.
+3. Run `npm run check` from `local-pusher`.
+4. Confirm the instance appears in the dashboard **Instances** tab.
 
 ### Prerequisites
 
@@ -114,12 +133,8 @@ A local pusher process collects session state from OpenClaw and POSTs it to `/ap
 
 ```json
 {
-  "agents": [
-    { "id": "session-abc", "label": "Clippy", "status": "active" }
-  ],
-  "edges": [
-    { "source": "session-abc", "target": "session-xyz" }
-  ],
+  "agents": [{ "id": "session-abc", "label": "Clippy", "status": "active" }],
+  "edges": [{ "source": "session-abc", "target": "session-xyz" }],
   "pushedAt": 1711620000000
 }
 ```
@@ -158,6 +173,7 @@ curl -fsSL https://raw.githubusercontent.com/toinevl/agent-monitor/main/skills/a
 ```
 
 `--all` is shorthand for `--heartbeat --cron --fix-heartbeat --send-now`. It:
+
 - Adds the beacon task to `HEARTBEAT.md`
 - Creates a cron job (every 15 min) so the instance stays online even if heartbeats are delayed
 - Fixes heartbeat routing to the correct agent
@@ -174,19 +190,19 @@ See [`skills/agent-monitor-beacon/deploy-beacon.sh`](skills/agent-monitor-beacon
 
 ```json
 {
-  "instanceId":   "home-pi",
-  "label":        "Home Raspberry Pi",
-  "centralUrl":   "https://your-agent-monitor-url.com",
+  "instanceId": "home-pi",
+  "label": "Home Raspberry Pi",
+  "centralUrl": "https://your-agent-monitor-url.com",
   "beaconSecret": "your-beacon-secret"
 }
 ```
 
-| Key | Required | Description |
-|-----|----------|-------------|
-| `instanceId` | ✅ | Unique slug for this instance (no spaces) |
-| `label` | ❌ | Human-readable name shown in the dashboard |
-| `centralUrl` | ✅ | Base URL of the Agent Monitor backend |
-| `beaconSecret` | ✅ | Must match `BEACON_SECRET` on the backend |
+| Key            | Required | Description                                |
+| -------------- | -------- | ------------------------------------------ |
+| `instanceId`   | ✅       | Unique slug for this instance (no spaces)  |
+| `label`        | ❌       | Human-readable name shown in the dashboard |
+| `centralUrl`   | ✅       | Base URL of the Agent Monitor backend      |
+| `beaconSecret` | ✅       | Must match `BEACON_SECRET` on the backend  |
 
 3. Add to the instance's `HEARTBEAT.md`:
 
@@ -200,16 +216,16 @@ The agent beacons automatically on every heartbeat cycle (~every 15–30 min).
 
 ```json
 {
-  "instanceId":     "home-pi",
-  "label":          "Home Raspberry Pi",
-  "version":        "2026.3.24",
-  "model":          "anthropic/claude-sonnet-4-6",
-  "host":           "Linux arm64",
-  "channel":        "telegram",
-  "agents":         [{ "id": "1", "name": "Clippy" }],
+  "instanceId": "home-pi",
+  "label": "Home Raspberry Pi",
+  "version": "2026.3.24",
+  "model": "anthropic/claude-sonnet-4-6",
+  "host": "Linux arm64",
+  "channel": "telegram",
+  "agents": [{ "id": "1", "name": "Clippy" }],
   "activeSessions": 2,
-  "plugins":        { "loaded": 38, "total": 80 },
-  "uptime":         86400
+  "plugins": { "loaded": 38, "total": 80 },
+  "uptime": 86400
 }
 ```
 
@@ -219,13 +235,13 @@ Auth: `Authorization: Bearer <BEACON_SECRET>`
 
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3001` (dev) / `8080` (Docker) | HTTP port |
-| `PUSH_SECRET` | _(required)_ | Auth token for `/api/push` |
-| `BEACON_SECRET` | _(required)_ | Auth token for `/api/beacon` |
-| `AZURE_STORAGE_CONNECTION_STRING` | _(unset = local JSON fallback)_ | Azure Table Storage for beacon data |
-| `OFFLINE_THRESHOLD_MS` | `600000` (10 min) | Time before instance is marked offline |
+| Variable                          | Default                         | Description                            |
+| --------------------------------- | ------------------------------- | -------------------------------------- |
+| `PORT`                            | `3001` (dev) / `8080` (Docker)  | HTTP port                              |
+| `PUSH_SECRET`                     | _(required)_                    | Auth token for `/api/push`             |
+| `BEACON_SECRET`                   | _(required)_                    | Auth token for `/api/beacon`           |
+| `AZURE_STORAGE_CONNECTION_STRING` | _(unset = local JSON fallback)_ | Azure Table Storage for beacon data    |
+| `OFFLINE_THRESHOLD_MS`            | `600000` (10 min)               | Time before instance is marked offline |
 
 > ⚠️ Change `PUSH_SECRET` and `BEACON_SECRET` before deploying to production.
 
@@ -233,10 +249,10 @@ Auth: `Authorization: Bearer <BEACON_SECRET>`
 
 ## Data Storage
 
-| Environment | Storage |
-|-------------|---------|
-| Local dev | `data/instances.json` (auto-created, gitignored) |
-| Production | Azure Table Storage (`OpenClawInstances` table, auto-created on first beacon) |
+| Environment | Storage                                                                       |
+| ----------- | ----------------------------------------------------------------------------- |
+| Local dev   | `data/instances.json` (auto-created, gitignored)                              |
+| Production  | Azure Table Storage (`OpenClawInstances` table, auto-created on first beacon) |
 
 **Setting up Azure Table Storage:**
 
@@ -253,17 +269,17 @@ Without the connection string the backend silently falls back to `data/instances
 
 ## API Reference
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/api/push` | `PUSH_SECRET` | Push agent session state |
-| `GET` | `/api/state` | — | Latest session snapshot |
-| `GET` | `/api/sessions/history` | — | Session history for date range (query: ?start=...&end=...) |
-| `GET` | `/api/sessions/stats` | — | Session statistics for a day (query: ?date=...) |
-| `POST` | `/api/beacon` | `BEACON_SECRET` | Instance beacon / registration |
-| `GET` | `/api/instances` | — | List all registered instances |
-| `DELETE` | `/api/instances/:id` | `BEACON_SECRET` | Remove an instance |
-| `GET` | `/api/health` | — | Health check with uptime |
-| `GET` | `/api/report` | — | Latest AI briefing report |
+| Method   | Path                    | Auth            | Description                                                |
+| -------- | ----------------------- | --------------- | ---------------------------------------------------------- |
+| `POST`   | `/api/push`             | `PUSH_SECRET`   | Push agent session state                                   |
+| `GET`    | `/api/state`            | —               | Latest session snapshot                                    |
+| `GET`    | `/api/sessions/history` | —               | Session history for date range (query: ?start=...&end=...) |
+| `GET`    | `/api/sessions/stats`   | —               | Session statistics for a day (query: ?date=...)            |
+| `POST`   | `/api/beacon`           | `BEACON_SECRET` | Instance beacon / registration                             |
+| `GET`    | `/api/instances`        | —               | List all registered instances                              |
+| `DELETE` | `/api/instances/:id`    | `BEACON_SECRET` | Remove an instance                                         |
+| `GET`    | `/api/health`           | —               | Health check with uptime                                   |
+| `GET`    | `/api/report`           | —               | Latest AI briefing report                                  |
 
 ---
 
@@ -287,6 +303,7 @@ curl http://localhost:3001/api/sessions/stats?date=2026-03-29
 ```
 
 **Response:**
+
 ```json
 {
   "date": "2026-03-29T00:00:00.000Z",
@@ -310,15 +327,15 @@ The **Instances** tab now includes:
 
 ## API Reference
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/api/push` | `PUSH_SECRET` | Push agent session state |
-| `GET` | `/api/state` | — | Latest session snapshot |
-| `POST` | `/api/beacon` | `BEACON_SECRET` | Instance beacon / registration |
-| `GET` | `/api/instances` | — | List all registered instances |
-| `DELETE` | `/api/instances/:id` | `BEACON_SECRET` | Remove an instance |
-| `GET` | `/api/health` | — | Health check |
-| `GET` | `/api/report` | — | Latest AI briefing report |
+| Method   | Path                 | Auth            | Description                    |
+| -------- | -------------------- | --------------- | ------------------------------ |
+| `POST`   | `/api/push`          | `PUSH_SECRET`   | Push agent session state       |
+| `GET`    | `/api/state`         | —               | Latest session snapshot        |
+| `POST`   | `/api/beacon`        | `BEACON_SECRET` | Instance beacon / registration |
+| `GET`    | `/api/instances`     | —               | List all registered instances  |
+| `DELETE` | `/api/instances/:id` | `BEACON_SECRET` | Remove an instance             |
+| `GET`    | `/api/health`        | —               | Health check                   |
+| `GET`    | `/api/report`        | —               | Latest AI briefing report      |
 
 ---
 
@@ -338,9 +355,9 @@ docker run -p 8080:8080 \
 
 Two scripts handle the full Azure deployment:
 
-| Script | Purpose |
-|--------|---------|
-| [`deploy-azure.ps1`](deploy-azure.ps1) | Build, push, and deploy (or update) the Container App |
+| Script                                                     | Purpose                                                                      |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`deploy-azure.ps1`](deploy-azure.ps1)                     | Build, push, and deploy (or update) the Container App                        |
 | [`add-persistent-storage.ps1`](add-persistent-storage.ps1) | Provision Azure Files and mount at `/app/data` (run once after first deploy) |
 
 **Prerequisites:** Docker Desktop, Azure CLI (`az login`), access to the ACR registry.
