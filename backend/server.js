@@ -63,49 +63,53 @@ const wss = new WebSocketServer({ server: httpServer });
 
 let pushedState = null; // { agents, edges, pushedAt }
 let connectedClients = 0; // Track active WebSocket connections
+let lastStateUpdate = null; // timestamp of the latest valid /api/push
 
 // ---------- REST endpoints — Session monitor ----------
 
 // POST /api/push — receive state from local pusher
 app.post('/api/push', pushLimiter, authMiddleware('PUSH_SECRET'), (req, res) => {
-
-  const { agents, edges, pushedAt } = req.body;
-  if (!Array.isArray(agents) || !Array.isArray(edges)) {
-    return res.status(400).json({ error: 'agents and edges must be arrays' });
+  const validation = validatePayload(pushPayloadSchema, req.body);
+  if (!validation.valid) {
+    logEvent('push_validation_error', {
+      error: validation.error,
+      ip: req.ip,
+    });
+    return res.status(400).json({
+      error: 'Invalid push payload',
+      details: validation.error,
+    });
   }
-  if (agents.length > 500 || edges.length > 1000) {
-    return res.status(400).json({ error: 'Payload exceeds maximum allowed size' });
-  }
 
+  const { agents, edges, pushedAt } = validation.data;
   pushedState = { agents, edges, pushedAt: typeof pushedAt === 'number' ? pushedAt : Date.now() };
+  lastStateUpdate = Date.now();
 
-    logEvent('session_state_pushed', {
-      agentCount: agents.length,
-      edgeCount: edges.length,
-      connectedClients,
-    });
+  logEvent('session_state_pushed', {
+    agentCount: agents.length,
+    edgeCount: edges.length,
+    connectedClients,
+  });
 
-    // Broadcast to all connected clients
-    const msg = JSON.stringify({ type: 'state', data: pushedState });
-    let failedClients = 0;
-    wss.clients.forEach(client => {
-      if (client.readyState === 1) {
-        client.send(msg, err => {
-          if (err) {
-            failedClients++;
-            logError(err, { context: 'ws_broadcast_push' });
-          }
-        });
-      }
-    });
+  const msg = JSON.stringify({ type: 'state', data: pushedState });
+  let failedClients = 0;
+  wss.clients.forEach(client => {
+    if (client.readyState === 1) {
+      client.send(msg, err => {
+        if (err) {
+          failedClients++;
+          logError(err, { context: 'ws_broadcast_push' });
+        }
+      });
+    }
+  });
 
-    res.json({
-      ok: true,
-      broadcastTo: connectedClients - failedClients,
-      agentCount: agents.length,
-    });
-  }
-);
+  res.json({
+    ok: true,
+    broadcastTo: connectedClients - failedClients,
+    agentCount: agents.length,
+  });
+});
 
 /**
  * GET /api/state — Fetch latest session snapshot
@@ -121,13 +125,28 @@ app.get('/api/state', (req, res) => {
 /**
  * GET /api/health — Health check with uptime
  */
-app.get('/api/health', (req, res) => {
-  res.json({
-    ok: true,
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    connectedClients,
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    const instances = await listInstances();
+    const onlineInstances = instances.filter(i => i.online).length;
+
+    res.json({
+      ok: true,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      connectedClients,
+      lastStateUpdate,
+      totalInstances: instances.length,
+      onlineInstances,
+    });
+  } catch (err) {
+    logError(err, { context: 'health_check' });
+    res.status(500).json({
+      ok: false,
+      error: 'Failed to compute health metrics',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 /**

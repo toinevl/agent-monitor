@@ -118,18 +118,7 @@ function Stat({ label, value, color }: StatProps): React.ReactElement {
 }
 
 export default function App(): React.ReactElement {
-  const { agents, edges: rawEdges, instances, setInstances, connected, lastUpdated } = useAgentState();
-
-  const refreshInstances = useCallback(async (): Promise<void> => {
-    const base = import.meta.env.VITE_BACKEND_HTTP ||
-      (import.meta.env.PROD ? '' : 'http://localhost:3001');
-    try {
-      const res = await fetch(`${base}/api/instances`);
-      if (res.ok) setInstances(await res.json());
-    } catch (err) {
-      console.error('[refresh] Failed to fetch instances:', err);
-    }
-  }, [setInstances]);
+  const { agents, edges: rawEdges, instances, connected, lastUpdated, backendError, refreshInstances } = useAgentState();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
@@ -177,6 +166,15 @@ export default function App(): React.ReactElement {
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: connected ? '#4ade80' : '#78716c', boxShadow: connected ? '0 0 6px #4ade80' : 'none' }} />
             {connected ? 'live' : 'connecting...'}
           </span>
+          {backendError && (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '2px 10px', borderRadius: 20, fontSize: 11,
+              background: '#3f1f1f', color: '#f87171', border: '1px solid #7f1d1d',
+            }}>
+              ⚠️ {backendError}
+            </span>
+          )}
         </div>
 
         <div role="tablist" style={{ display: 'flex', gap: 4 }}>

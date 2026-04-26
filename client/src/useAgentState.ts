@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Agent, Edge } from './mockData';
 
 export interface Instance {
@@ -30,6 +30,8 @@ interface AgentStateResult {
   setInstances: React.Dispatch<React.SetStateAction<Instance[]>>;
   connected: boolean;
   lastUpdated: Date | null;
+  backendError: string | null;
+  refreshInstances: () => Promise<void>;
 }
 
 const BACKEND_HTTP = import.meta.env.VITE_BACKEND_HTTP ||
@@ -45,35 +47,69 @@ export function useAgentState(): AgentStateResult {
   const [instances, setInstances] = useState<Instance[]>([]);
   const [connected, setConnected] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [backendError, setBackendError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimer = useRef<number | null>(null);
+  const refreshInterval = useRef<number | null>(null);
 
-  function applyState(data: StatePayload): void {
+  const applyState = useCallback((data: StatePayload): void => {
     setAgents(data.agents || []);
     setEdges(data.edges   || []);
     setLastUpdated(new Date(data.polledAt || data.pushedAt || Date.now()));
-  }
+  }, []);
+
+  const fetchInstances = useCallback(async (): Promise<void> => {
+    try {
+      const res = await fetch(`${BACKEND_HTTP}/api/instances`);
+      if (!res.ok) throw new Error(`Instances fetch failed (${res.status})`);
+      const data = await res.json();
+      setInstances(data);
+      setBackendError(null);
+    } catch (err) {
+      console.error('[fetch] Failed to load instances:', err);
+      setBackendError('Failed to refresh instance list');
+    }
+  }, []);
+
+  const fetchState = useCallback(async (): Promise<void> => {
+    try {
+      const res = await fetch(`${BACKEND_HTTP}/api/state`);
+      if (!res.ok) throw new Error(`State fetch failed (${res.status})`);
+      const data = await res.json();
+      applyState(data);
+      setBackendError(null);
+    } catch (err) {
+      console.error('[fetch] Failed to load state:', err);
+      setBackendError('Failed to refresh backend state');
+    }
+  }, [applyState]);
 
   useEffect(() => {
-    fetch(`${BACKEND_HTTP}/api/state`)
-      .then(r => r.json())
-      .then(applyState)
-      .catch(console.error);
-
-    fetch(`${BACKEND_HTTP}/api/instances`)
-      .then(r => r.json())
-      .then(setInstances)
-      .catch(console.error);
+    fetchState();
+    fetchInstances();
 
     function connect(): void {
       const ws = new WebSocket(BACKEND_WS);
       wsRef.current = ws;
 
-      ws.onopen  = () => setConnected(true);
+      ws.onopen = () => {
+        setConnected(true);
+        setBackendError(null);
+        fetchState();
+        fetchInstances();
+      };
+
       ws.onclose = () => {
         setConnected(false);
-        setTimeout(connect, 3000);
+        if (reconnectTimer.current) window.clearTimeout(reconnectTimer.current);
+        reconnectTimer.current = window.setTimeout(connect, 3000);
       };
-      ws.onerror = () => ws.close();
+
+      ws.onerror = () => {
+        setBackendError('WebSocket connection failed');
+        ws.close();
+      };
+
       ws.onmessage = (evt: MessageEvent) => {
         try {
           const msg: WsMessage = JSON.parse(evt.data as string);
@@ -91,8 +127,26 @@ export function useAgentState(): AgentStateResult {
     }
 
     connect();
-    return () => wsRef.current?.close();
-  }, []);
 
-  return { agents, edges, instances, setInstances, connected, lastUpdated };
+    refreshInterval.current = window.setInterval(() => {
+      fetchInstances();
+    }, 60000);
+
+    return () => {
+      wsRef.current?.close();
+      if (reconnectTimer.current) window.clearTimeout(reconnectTimer.current);
+      if (refreshInterval.current) window.clearInterval(refreshInterval.current);
+    };
+  }, [fetchInstances, fetchState]);
+
+  return {
+    agents,
+    edges,
+    instances,
+    setInstances,
+    connected,
+    lastUpdated,
+    backendError,
+    refreshInstances: fetchInstances,
+  };
 }
