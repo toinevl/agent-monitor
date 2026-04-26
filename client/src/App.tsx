@@ -167,11 +167,15 @@ export default function App(): React.ReactElement {
             {connected ? 'live' : 'connecting...'}
           </span>
           {backendError && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '2px 10px', borderRadius: 20, fontSize: 11,
-              background: '#3f1f1f', color: '#f87171', border: '1px solid #7f1d1d',
-            }}>
+            <span
+              data-testid="backend-error"
+              role="status"
+              aria-live="polite"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '2px 10px', borderRadius: 20, fontSize: 11,
+                background: '#3f1f1f', color: '#f87171', border: '1px solid #7f1d1d',
+              }}>
               ⚠️ {backendError}
             </span>
           )}

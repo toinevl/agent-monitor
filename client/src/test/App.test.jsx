@@ -119,7 +119,7 @@ describe('App', () => {
     });
 
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/Failed to refresh instance list/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('backend-error')).toHaveTextContent(/Failed to refresh instance list/i));
   });
 
   it('refreshes instance list and updates UI when refresh is clicked', async () => {
