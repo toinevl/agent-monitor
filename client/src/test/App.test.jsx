@@ -113,7 +113,7 @@ describe('App', () => {
         return Promise.resolve({ ok: true, json: async () => ({ agents: [], edges: [], pushedAt: null }) });
       }
       if (url.endsWith('/api/instances')) {
-        return Promise.reject(new Error('Network error'));
+        return Promise.resolve({ ok: true, json: async () => { throw new Error('JSON parse error'); } });
       }
       return Promise.resolve({ ok: false, status: 404, json: async () => ({}) });
     });
