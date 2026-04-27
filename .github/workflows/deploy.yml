@@ -110,10 +110,20 @@ jobs:
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$URL/api/health")
             if [ "$STATUS" = "200" ]; then
               echo "✅ Deployed to: https://$URL"
-              exit 0
+              break
             fi
             echo "Health check attempt $i failed (HTTP $STATUS), retrying in 10s..."
             sleep 10
           done
-          echo "❌ Health check failed after 5 attempts"
-          exit 1
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Health check failed after 5 attempts"
+            exit 1
+          fi
+
+          VERSION_SHA=$(curl -sS "https://$URL/api/version" | python3 -c 'import sys, json; data=json.load(sys.stdin); print(data.get("buildSha", ""))')
+          echo "Deployed build SHA: $VERSION_SHA"
+          if [ "$VERSION_SHA" != "${{ github.sha }}" ]; then
+            echo "❌ Version mismatch: expected ${{ github.sha }}, got $VERSION_SHA"
+            exit 1
+          fi
+          echo "✅ Version endpoint matches commit SHA"

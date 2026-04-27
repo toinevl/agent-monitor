@@ -24,6 +24,8 @@ RUN pnpm run build
 
 # ---- Runtime stage ----
 FROM node:22-alpine AS runtime
+ARG BUILD_SHA=""
+ENV BUILD_SHA=$BUILD_SHA
 
 WORKDIR /app
 

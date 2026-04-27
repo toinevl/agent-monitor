@@ -240,6 +240,46 @@ Query parameters:
 curl "http://localhost:3001/api/sessions/stats?date=2026-03-29"
 ```
 
+#### `GET /api/health` — Health check with uptime
+Get runtime health metrics for the backend.
+
+```bash
+curl http://localhost:3001/api/health
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "uptime": 1234.56,
+  "timestamp": "2026-03-29T15:30:00.000Z",
+  "connectedClients": 2,
+  "lastStateUpdate": 1711620000000,
+  "totalInstances": 3,
+  "onlineInstances": 3,
+  "buildSha": "abcdef1234567890",
+  "buildShaShort": "abcdef1"
+}
+```
+
+#### `GET /api/version` — Runtime build metadata
+Get deployed build metadata for smoke testing and CI verification.
+
+```bash
+curl http://localhost:3001/api/version
+```
+
+**Response:**
+```json
+{
+  "ok": true,
+  "buildSha": "abcdef1234567890",
+  "buildShaShort": "abcdef1",
+  "nodeEnv": "production",
+  "timestamp": "2026-03-29T15:30:00.000Z"
+}
+```
+
 **Response:**
 ```json
 {

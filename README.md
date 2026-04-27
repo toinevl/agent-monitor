@@ -279,9 +279,12 @@ Without the connection string the backend silently falls back to `data/instances
 | `GET`    | `/api/instances`        | —               | List all registered instances                              |
 | `DELETE` | `/api/instances/:id`    | `BEACON_SECRET` | Remove an instance                                         |
 | `GET`    | `/api/health`           | —               | Health check with uptime                                   |
+| `GET`    | `/api/version`          | —               | Runtime build metadata; verify deployed commit SHA         |
 | `GET`    | `/api/report`           | —               | Latest AI briefing report                                  |
 
 ---
+
+> Tip: `GET /api/version` returns `buildSha` and `buildShaShort`, which is useful for smoke-testing the deployed image against the source commit.
 
 ## New in Phase 2: Session History & Analytics
 

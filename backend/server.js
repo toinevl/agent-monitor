@@ -31,6 +31,8 @@ const BEACON_SECRET = process.env.BEACON_SECRET;
 const REPORT_BASE_DIR =
   process.env.REPORT_BASE_DIR ||
   '/home/node/.openclaw/workspace/agents/results';
+const BUILD_SHA = process.env.BUILD_SHA || null;
+const BUILD_SHA_SHORT = BUILD_SHA ? BUILD_SHA.slice(0, 7) : null;
 
 if (!PUSH_SECRET || !BEACON_SECRET) {
   console.error('FATAL: PUSH_SECRET and BEACON_SECRET environment variables must be set');
@@ -138,6 +140,8 @@ app.get('/api/health', async (req, res) => {
       lastStateUpdate,
       totalInstances: instances.length,
       onlineInstances,
+      buildSha: BUILD_SHA,
+      buildShaShort: BUILD_SHA_SHORT,
     });
   } catch (err) {
     logError(err, { context: 'health_check' });
@@ -147,6 +151,19 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   }
+});
+
+/**
+ * GET /api/version — Runtime build metadata for smoke testing
+ */
+app.get('/api/version', (req, res) => {
+  res.json({
+    ok: true,
+    buildSha: BUILD_SHA,
+    buildShaShort: BUILD_SHA_SHORT,
+    nodeEnv: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 /**
