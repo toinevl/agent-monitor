@@ -51,8 +51,8 @@ function MetaRow({ icon, label, value, span }: MetaRowProps): React.ReactElement
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, gridColumn: span ? '1 / -1' : undefined, minWidth: 0, overflow: 'hidden' }}>
       <span style={{ fontSize: 12, flexShrink: 0 }}>{icon}</span>
-      <span style={{ color: '#475569', flexShrink: 0, whiteSpace: 'nowrap' }}>{label}:</span>
-      <span style={{ color: '#cbd5e1', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }} title={String(value)}>
+      <span style={{ color: 'var(--tx-dim)', flexShrink: 0, whiteSpace: 'nowrap' }}>{label}:</span>
+      <span style={{ color: 'var(--tx-hi)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }} title={String(value)}>
         {String(value)}
       </span>
     </div>
@@ -77,19 +77,19 @@ function InstanceCard({ inst }: InstanceCardProps): React.ReactElement {
 
   return (
     <div style={{
-      background: '#0f172a',
-      border: `1px solid ${online ? '#166534' : '#2e1a1a'}`,
+      background: 'var(--bg-surface)',
+      border: `1px solid var(${online ? '--inst-online-border' : '--inst-offline-border'})`,
       borderRadius: 12, padding: '16px 20px',
       display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0, overflow: 'hidden',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, boxShadow: online ? `0 0 6px ${statusColor}` : 'none', flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={inst.label || inst.instanceId}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--tx-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={inst.label || inst.instanceId}>
             {inst.label || inst.instanceId}
           </div>
           {inst.label && (
-            <div style={{ fontSize: 11, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 11, color: 'var(--tx-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {inst.instanceId}
             </div>
           )}
@@ -97,7 +97,7 @@ function InstanceCard({ inst }: InstanceCardProps): React.ReactElement {
         <Badge color={statusColor}>{online ? 'online' : 'offline'}</Badge>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', fontSize: 12, color: '#94a3b8', minWidth: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 12px', fontSize: 12, color: 'var(--tx-med)', minWidth: 0, overflow: 'hidden' }}>
         {inst.version         && <MetaRow icon="📦" label="Version"  value={inst.version} />}
         {inst.model           && <MetaRow icon="🧠" label="Model"    value={inst.model} span />}
         {inst.host            && <MetaRow icon="💻" label="Host"     value={inst.host} span />}
@@ -108,7 +108,7 @@ function InstanceCard({ inst }: InstanceCardProps): React.ReactElement {
       </div>
 
       {(inst.agents?.length ?? 0) > 0 && (
-        <div style={{ background: '#0a0f1e', borderRadius: 8, padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ background: 'var(--bg-raised)', borderRadius: 8, padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {inst.agents!.map(a => (
             <Badge key={a.id} color="#60a5fa">{a.id}</Badge>
           ))}
@@ -127,14 +127,14 @@ interface SearchInputProps {
 function SearchInput({ value, onChange, placeholder = 'Search instances...' }: SearchInputProps): React.ReactElement {
   return (
     <div style={{ position: 'relative', display: 'flex', alignItems: 'center', flex: 1, minWidth: 200 }}>
-      <Search size={16} style={{ position: 'absolute', left: 10, color: '#64748b' }} />
+      <Search size={16} style={{ position: 'absolute', left: 10, color: 'var(--tx-lo)' }} />
       <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={{
         width: '100%', padding: '6px 10px 6px 32px',
-        background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
-        color: '#f1f5f9', fontSize: 12, outline: 'none',
+        background: 'var(--bg-raised)', border: '1px solid var(--border-lt)', borderRadius: 6,
+        color: 'var(--tx-hi)', fontSize: 12, outline: 'none',
       }} />
       {value && (
-        <button onClick={() => onChange('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 2 }}>
+        <button onClick={() => onChange('')} style={{ position: 'absolute', right: 8, background: 'none', border: 'none', color: 'var(--tx-med)', cursor: 'pointer', padding: 2 }}>
           <X size={14} />
         </button>
       )}
@@ -151,21 +151,21 @@ interface SortDropdownProps {
 
 function SortDropdown({ value, onChange }: SortDropdownProps): React.ReactElement {
   const options: { label: string; value: SortOption }[] = [
-    { label: 'Last seen (newest)',  value: 'lastSeen' },
+    { label: 'Last seen (newest)',    value: 'lastSeen' },
     { label: 'Status (online first)', value: 'status' },
-    { label: 'Name (A-Z)',          value: 'name' },
-    { label: 'Active sessions',     value: 'sessions' },
+    { label: 'Name (A-Z)',            value: 'name' },
+    { label: 'Active sessions',       value: 'sessions' },
   ];
   return (
     <div style={{ position: 'relative', minWidth: 180 }}>
       <select value={value} onChange={e => onChange(e.target.value as SortOption)} style={{
-        width: '100%', padding: '6px 10px', background: '#1e293b',
-        border: '1px solid #334155', borderRadius: 6, color: '#f1f5f9',
+        width: '100%', padding: '6px 10px', background: 'var(--bg-raised)',
+        border: '1px solid var(--border-lt)', borderRadius: 6, color: 'var(--tx-hi)',
         fontSize: 12, cursor: 'pointer', appearance: 'none', paddingRight: 28,
       }}>
         {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
       </select>
-      <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#64748b' }} />
+      <ChevronDown size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'var(--tx-lo)' }} />
     </div>
   );
 }
@@ -227,19 +227,19 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      <div style={{ padding: '12px 24px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-        <span style={{ color: '#475569', fontSize: 13 }}>Fleet overview</span>
+      <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--tx-dim)', fontSize: 13 }}>Fleet overview</span>
         <span style={{ color: '#4ade80', fontWeight: 700 }}>{online} online</span>
         {offline > 0 && <span style={{ color: '#f87171', fontWeight: 700 }}>{offline} offline</span>}
-        <span style={{ color: '#334155', fontSize: 12, marginLeft: 'auto' }}>{sorted.length}/{extInstances.length} instance{extInstances.length !== 1 ? 's' : ''}</span>
+        <span style={{ color: 'var(--border-lt)', fontSize: 12, marginLeft: 'auto' }}>{sorted.length}/{extInstances.length} instance{extInstances.length !== 1 ? 's' : ''}</span>
       </div>
 
-      <div style={{ padding: '16px 24px', borderBottom: '1px solid #1e293b', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <SearchInput value={searchQuery} onChange={setSearchQuery} />
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ color: '#64748b', fontSize: 12, whiteSpace: 'nowrap' }}>Filter:</span>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as 'all' | 'online' | 'offline')} style={{ padding: '6px 10px', background: '#1e293b', border: '1px solid #334155', borderRadius: 6, color: '#f1f5f9', fontSize: 12, cursor: 'pointer' }}>
+          <span style={{ color: 'var(--tx-lo)', fontSize: 12, whiteSpace: 'nowrap' }}>Filter:</span>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as 'all' | 'online' | 'offline')} style={{ padding: '6px 10px', background: 'var(--bg-raised)', border: '1px solid var(--border-lt)', borderRadius: 6, color: 'var(--tx-hi)', fontSize: 12, cursor: 'pointer' }}>
             <option value="all">All</option>
             <option value="online">Online</option>
             <option value="offline">Offline</option>
@@ -247,15 +247,15 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
         </div>
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ color: '#64748b', fontSize: 12, whiteSpace: 'nowrap' }}>Sort:</span>
+          <span style={{ color: 'var(--tx-lo)', fontSize: 12, whiteSpace: 'nowrap' }}>Sort:</span>
           <SortDropdown value={sortBy} onChange={setSortBy} />
         </div>
 
         <button onClick={toggleHideOffline} aria-label={hideOffline ? 'Show offline instances' : 'Hide offline instances'} title={hideOffline ? 'Show offline instances' : 'Hide offline instances'} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
-          background: hideOffline ? '#1e3a5f' : '#1e293b',
-          border: `1px solid ${hideOffline ? '#2563eb' : '#334155'}`,
-          borderRadius: 6, color: hideOffline ? '#60a5fa' : '#94a3b8',
+          background: hideOffline ? '#1e3a5f' : 'var(--bg-raised)',
+          border: `1px solid ${hideOffline ? '#2563eb' : 'var(--border-lt)'}`,
+          borderRadius: 6, color: hideOffline ? '#60a5fa' : 'var(--tx-med)',
           fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: hideOffline ? 600 : 400,
         }}>
           {hideOffline ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -264,8 +264,8 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
 
         {onRefresh && <button onClick={handleRefresh} disabled={refreshing} aria-label="Refresh instance list" title="Refresh instance list" style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px',
-          background: '#1e293b', border: '1px solid #334155', borderRadius: 6,
-          color: refreshing ? '#475569' : '#94a3b8', fontSize: 12,
+          background: 'var(--bg-raised)', border: '1px solid var(--border-lt)', borderRadius: 6,
+          color: refreshing ? 'var(--tx-dim)' : 'var(--tx-med)', fontSize: 12,
           cursor: refreshing ? 'default' : 'pointer', whiteSpace: 'nowrap',
         }}>
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
@@ -277,10 +277,10 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
 
       <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, alignContent: 'start' }}>
         {sorted.length === 0 ? (
-          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: '#334155', gap: 12 }}>
+          <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: 'var(--tx-lo)', gap: 12 }}>
             <div style={{ fontSize: 32 }}>📡</div>
             <div style={{ fontSize: 14 }}>{extInstances.length === 0 ? 'No instances registered yet' : 'No results found'}</div>
-            <div style={{ fontSize: 12, color: '#1e293b', textAlign: 'center', maxWidth: 300 }}>
+            <div style={{ fontSize: 12, color: 'var(--border-lt)', textAlign: 'center', maxWidth: 300 }}>
               {extInstances.length === 0 ? 'Install the beacon skill on each OpenClaw instance to start seeing them here.' : 'Try adjusting your search or filter criteria.'}
             </div>
           </div>
@@ -290,10 +290,10 @@ export default function InstancesPanel({ instances, onRefresh }: InstancesPanelP
       </div>
 
       {totalPages > 1 && (
-        <div style={{ padding: '12px 24px', borderTop: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} style={{ padding: '4px 12px', background: currentPage === 1 ? '#1e293b' : '#334155', border: 'none', borderRadius: 4, color: currentPage === 1 ? '#64748b' : '#f1f5f9', cursor: currentPage === 1 ? 'default' : 'pointer', fontSize: 11 }}>← Prev</button>
-          <span style={{ color: '#64748b', fontSize: 11 }}>Page {currentPage} of {totalPages}</span>
-          <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} style={{ padding: '4px 12px', background: currentPage === totalPages ? '#1e293b' : '#334155', border: 'none', borderRadius: 4, color: currentPage === totalPages ? '#64748b' : '#f1f5f9', cursor: currentPage === totalPages ? 'default' : 'pointer', fontSize: 11 }}>Next →</button>
+        <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} style={{ padding: '4px 12px', background: currentPage === 1 ? 'var(--bg-raised)' : 'var(--bg-hover)', border: 'none', borderRadius: 4, color: currentPage === 1 ? 'var(--tx-lo)' : 'var(--tx-hi)', cursor: currentPage === 1 ? 'default' : 'pointer', fontSize: 11 }}>← Prev</button>
+          <span style={{ color: 'var(--tx-lo)', fontSize: 11 }}>Page {currentPage} of {totalPages}</span>
+          <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} style={{ padding: '4px 12px', background: currentPage === totalPages ? 'var(--bg-raised)' : 'var(--bg-hover)', border: 'none', borderRadius: 4, color: currentPage === totalPages ? 'var(--tx-lo)' : 'var(--tx-hi)', cursor: currentPage === totalPages ? 'default' : 'pointer', fontSize: 11 }}>Next →</button>
         </div>
       )}
     </div>

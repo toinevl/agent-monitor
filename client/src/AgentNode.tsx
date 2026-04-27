@@ -23,10 +23,10 @@ interface StatusColor {
 }
 
 const statusColors: Record<AgentStatus, StatusColor> = {
-  running: { bg: '#1a2e1a', border: '#4ade80', dot: '#4ade80' },
-  done:    { bg: '#1a1f2e', border: '#60a5fa', dot: '#60a5fa' },
-  idle:    { bg: '#1e1e1e', border: '#6b7280', dot: '#6b7280' },
-  error:   { bg: '#2e1a1a', border: '#f87171', dot: '#f87171' },
+  running: { bg: 'var(--node-running)', border: '#4ade80', dot: '#4ade80' },
+  done:    { bg: 'var(--node-done)',    border: '#60a5fa', dot: '#60a5fa' },
+  idle:    { bg: 'var(--node-idle)',    border: '#6b7280', dot: '#6b7280' },
+  error:   { bg: 'var(--node-error)',   border: '#f87171', dot: '#f87171' },
 };
 
 const typeIcons: Record<AgentType, string> = {
@@ -54,14 +54,14 @@ export default function AgentNode({ data, selected }: { data: any; selected?: bo
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <span style={{ fontSize: 18 }}>{typeIcons[d.type] || '🤖'}</span>
-        <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 14 }}>{d.label}</span>
+        <span style={{ color: 'var(--tx-hi)', fontWeight: 700, fontSize: 14 }}>{d.label}</span>
         <span style={{
           marginLeft: 'auto', width: 8, height: 8, borderRadius: '50%',
           background: colors.dot, boxShadow: `0 0 6px ${colors.dot}`,
         }} />
       </div>
 
-      <div style={{ color: '#94a3b8', fontSize: 11, lineHeight: 1.4, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ color: 'var(--tx-med)', fontSize: 11, lineHeight: 1.4, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {d.task}
       </div>
 

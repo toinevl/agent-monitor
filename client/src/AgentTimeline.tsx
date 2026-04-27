@@ -173,27 +173,27 @@ export default function AgentTimeline({ agents = [], snapshots = [] }: AgentTime
   );
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#020617' }}>
-      <div style={{ padding: '12px 24px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <span style={{ color: '#475569', fontSize: 13 }}>Agent activity window</span>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--bg-base)' }}>
+      <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--tx-dim)', fontSize: 13 }}>Agent activity window</span>
         <div style={{ display: 'flex', gap: 4 }}>
           {TIME_WINDOWS.map(w => (
             <button key={w.label} onClick={() => setWindowMinutes(w.minutes)} style={{
-              background: windowMinutes === w.minutes ? '#1e293b' : 'transparent',
-              border: windowMinutes === w.minutes ? '1px solid #334155' : '1px solid transparent',
-              color: windowMinutes === w.minutes ? '#f1f5f9' : '#475569',
+              background: windowMinutes === w.minutes ? 'var(--bg-raised)' : 'transparent',
+              border: windowMinutes === w.minutes ? '1px solid var(--border-lt)' : '1px solid transparent',
+              color: windowMinutes === w.minutes ? 'var(--tx-hi)' : 'var(--tx-dim)',
               borderRadius: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 600,
             }}>{w.label}</button>
           ))}
         </div>
-        <span style={{ color: '#334155', fontSize: 12, marginLeft: 'auto' }}>
+        <span style={{ color: 'var(--border-lt)', fontSize: 12, marginLeft: 'auto' }}>
           {entries.length} agent{entries.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 24px' }}>
         {entries.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: '#334155', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 200, color: 'var(--tx-lo)', gap: 12 }}>
             <div style={{ fontSize: 32 }}>⏱️</div>
             <div style={{ fontSize: 14 }}>No timeline data yet</div>
           </div>
@@ -204,18 +204,18 @@ export default function AgentTimeline({ agents = [], snapshots = [] }: AgentTime
                 <div key={t.ts} style={{
                   position: 'absolute', left: `${t.pct}%`,
                   transform: t.pct === 100 ? 'translateX(-100%)' : t.pct === 0 ? 'none' : 'translateX(-50%)',
-                  fontSize: 11, color: '#475569', whiteSpace: 'nowrap',
+                  fontSize: 11, color: 'var(--tx-dim)', whiteSpace: 'nowrap',
                 }}>{t.label}</div>
               ))}
             </div>
             {entries.map(entry => (
               <AgentRow key={entry.id} entry={entry} bars={mergeBars(entry.bars)} windowStart={windowStart} windowSpan={windowSpan} />
             ))}
-            <div style={{ display: 'flex', gap: 16, marginTop: 20, paddingTop: 16, borderTop: '1px solid #1e293b', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 16, marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)', flexWrap: 'wrap' }}>
               {(Object.entries(STATUS_COLOR) as [AgentStatus, string][]).map(([status, color]) => (
                 <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ width: 12, height: 12, borderRadius: 3, background: color, opacity: 0.85 }} />
-                  <span style={{ fontSize: 11, color: '#475569', textTransform: 'capitalize' }}>{status}</span>
+                  <span style={{ fontSize: 11, color: 'var(--tx-dim)', textTransform: 'capitalize' }}>{status}</span>
                 </div>
               ))}
             </div>
@@ -239,11 +239,11 @@ function AgentRow({ entry, bars, windowStart, windowSpan }: AgentRowProps): Reac
     <div style={{ display: 'flex', alignItems: 'center', height: ROW_HEIGHT, marginBottom: 4 }}>
       <div style={{ width: LABEL_WIDTH, minWidth: LABEL_WIDTH, paddingRight: 12, display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: statusColor, flexShrink: 0, boxShadow: entry.status === 'running' ? `0 0 5px ${statusColor}` : 'none' }} />
-        <span style={{ fontSize: 12, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.name}>{entry.name}</span>
+        <span style={{ fontSize: 12, color: 'var(--tx-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.name}>{entry.name}</span>
       </div>
-      <div style={{ flex: 1, height: ROW_HEIGHT - 10, background: '#0f172a', borderRadius: 4, position: 'relative', border: '1px solid #1e293b', overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: ROW_HEIGHT - 10, background: 'var(--bg-surface)', borderRadius: 4, position: 'relative', border: '1px solid var(--border)', overflow: 'hidden' }}>
         {[25, 50, 75].map(pct => (
-          <div key={pct} style={{ position: 'absolute', left: `${pct}%`, top: 0, bottom: 0, width: 1, background: '#1e293b' }} />
+          <div key={pct} style={{ position: 'absolute', left: `${pct}%`, top: 0, bottom: 0, width: 1, background: 'var(--border)' }} />
         ))}
         {bars.map((bar, idx) => {
           const leftPct    = ((bar.start - windowStart) / windowSpan) * 100;
@@ -260,7 +260,7 @@ function AgentRow({ entry, bars, windowStart, windowSpan }: AgentRowProps): Reac
           );
         })}
         {bars.length === 0 && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', paddingLeft: 8, fontSize: 11, color: '#1e293b' }}>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', paddingLeft: 8, fontSize: 11, color: 'var(--border-lt)' }}>
             no activity in window
           </div>
         )}

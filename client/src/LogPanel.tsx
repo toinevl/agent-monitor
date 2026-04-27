@@ -32,9 +32,9 @@ interface StatBoxProps {
 
 function StatBox({ label, value }: StatBoxProps): React.ReactElement {
   return (
-    <div style={{ background: '#020617', borderRadius: 6, padding: '6px 10px' }}>
-      <div style={{ color: '#334155', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
-      <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2, fontWeight: 600 }}>{value}</div>
+    <div style={{ background: 'var(--bg-base)', borderRadius: 6, padding: '6px 10px' }}>
+      <div style={{ color: 'var(--tx-dim)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+      <div style={{ color: 'var(--tx-med)', fontSize: 12, marginTop: 2, fontWeight: 600 }}>{value}</div>
     </div>
   );
 }
@@ -42,11 +42,11 @@ function StatBox({ label, value }: StatBoxProps): React.ReactElement {
 export default function LogPanel({ agent, onClose }: LogPanelProps): React.ReactElement {
   if (!agent) return (
     <div style={{
-      background: '#0f172a',
-      border: '1px solid #1e293b',
+      background: 'var(--bg-surface)',
+      border: '1px solid var(--border)',
       borderRadius: 12,
       padding: 24,
-      color: '#475569',
+      color: 'var(--tx-dim)',
       height: '100%',
       display: 'flex',
       alignItems: 'center',
@@ -63,8 +63,8 @@ export default function LogPanel({ agent, onClose }: LogPanelProps): React.React
 
   return (
     <div style={{
-      background: '#0f172a',
-      border: '1px solid #1e293b',
+      background: 'var(--bg-surface)',
+      border: '1px solid var(--border)',
       borderRadius: 12,
       padding: 20,
       height: '100%',
@@ -76,14 +76,14 @@ export default function LogPanel({ agent, onClose }: LogPanelProps): React.React
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 20 }}>{TYPE_ICON[agent.type] || '🤖'}</span>
           <div>
-            <h3 style={{ color: '#f1f5f9', margin: 0, fontSize: 15 }}>{agent.label}</h3>
+            <h3 style={{ color: 'var(--tx-hi)', margin: 0, fontSize: 15 }}>{agent.label}</h3>
             <div style={{ color, fontSize: 11, marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 }}>
               {agent.status}
             </div>
           </div>
         </div>
         <button onClick={onClose} style={{
-          background: 'none', border: 'none', color: '#475569',
+          background: 'none', border: 'none', color: 'var(--tx-dim)',
           cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0,
         }}>×</button>
       </div>
@@ -96,28 +96,28 @@ export default function LogPanel({ agent, onClose }: LogPanelProps): React.React
       </div>
 
       <div style={{
-        background: '#020617',
+        background: 'var(--bg-base)',
         borderRadius: 8,
         padding: '10px 12px',
         marginBottom: 16,
-        color: '#94a3b8',
+        color: 'var(--tx-med)',
         fontSize: 12,
         lineHeight: 1.5,
       }}>
-        <div style={{ color: '#334155', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+        <div style={{ color: 'var(--tx-dim)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
           Current Task
         </div>
         {agent.task || 'No task info available'}
       </div>
 
       <div style={{
-        color: '#1e293b',
+        color: 'var(--border-lt)',
         fontSize: 10,
         fontFamily: 'monospace',
         wordBreak: 'break-all',
         marginTop: 'auto',
         paddingTop: 12,
-        borderTop: '1px solid #0f172a',
+        borderTop: '1px solid var(--border)',
       }}>
         {agent.key}
       </div>

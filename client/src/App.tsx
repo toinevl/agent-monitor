@@ -15,6 +15,7 @@ import AgentNode, { type AgentNodeData } from './AgentNode';
 import LogPanel from './LogPanel';
 import ReportPanel from './ReportPanel';
 import { useAgentState } from './useAgentState';
+import { useTheme } from './ThemeContext';
 import type { Agent, AgentStatus, Edge } from './mockData';
 
 const InstancesPanel  = lazy(() => import('./InstancesPanel'));
@@ -66,9 +67,9 @@ function buildEdges(edges: Edge[]): FlowEdge[] {
   return edges.map(e => ({
     ...e,
     animated: true,
-    style:        { stroke: '#334155', strokeWidth: 2 },
-    labelStyle:   { fill: '#64748b', fontSize: 11 },
-    labelBgStyle: { fill: '#0f172a' },
+    style:        { stroke: 'var(--border-lt)', strokeWidth: 2 },
+    labelStyle:   { fill: 'var(--tx-lo)', fontSize: 11 },
+    labelBgStyle: { fill: 'var(--bg-surface)' },
   }));
 }
 
@@ -90,9 +91,9 @@ function TabButton({ active, onClick, children }: TabButtonProps): React.ReactEl
       aria-selected={active}
       onClick={onClick}
       style={{
-        background: active ? '#1e293b' : 'transparent',
-        border: active ? '1px solid #334155' : '1px solid transparent',
-        color: active ? '#f1f5f9' : '#475569',
+        background: active ? 'var(--bg-raised)' : 'transparent',
+        border: active ? '1px solid var(--border-lt)' : '1px solid transparent',
+        color: active ? 'var(--tx-hi)' : 'var(--tx-dim)',
         borderRadius: 8, padding: '6px 14px', fontSize: 12,
         cursor: 'pointer', fontWeight: 600, transition: 'all 0.15s',
       }}
@@ -112,13 +113,32 @@ function Stat({ label, value, color }: StatProps): React.ReactElement {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--tx-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
     </div>
+  );
+}
+
+function ThemeToggle(): React.ReactElement {
+  const { theme, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      style={{
+        background: 'var(--bg-raised)', border: '1px solid var(--border-lt)',
+        borderRadius: 8, padding: '5px 10px', cursor: 'pointer',
+        fontSize: 15, lineHeight: 1, color: 'var(--tx-med)',
+      }}
+    >
+      {theme === 'dark' ? '☀️' : '🌙'}
+    </button>
   );
 }
 
 export default function App(): React.ReactElement {
   const { agents, edges: rawEdges, instances, connected, lastUpdated, backendError, refreshInstances } = useAgentState();
+  const { theme } = useTheme();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
@@ -147,11 +167,13 @@ export default function App(): React.ReactElement {
   const idle            = statusCount(agents, 'idle');
   const onlineInstances = instances.filter(i => i.online).length;
 
+  const bgColor = theme === 'dark' ? '#1e293b' : '#e2e8f0';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#020617', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg-base)', color: 'var(--tx-hi)', fontFamily: 'system-ui, sans-serif' }}>
 
       {/* Header */}
-      <div style={{ padding: '14px 24px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 18, fontWeight: 700 }}>🧠 Agent Monitor</span>
           <span
@@ -159,9 +181,9 @@ export default function App(): React.ReactElement {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '2px 10px', borderRadius: 20, fontSize: 11,
-              background: connected ? '#14532d' : '#1c1917',
-              color:      connected ? '#4ade80' : '#78716c',
-              border: `1px solid ${connected ? '#166534' : '#292524'}`,
+              background: `var(${connected ? '--badge-live-bg' : '--badge-wait-bg'})`,
+              color:      `var(${connected ? '--badge-live-text' : '--badge-wait-text'})`,
+              border:     `1px solid var(${connected ? '--badge-live-border' : '--badge-wait-border'})`,
             }}>
             <span style={{ width: 6, height: 6, borderRadius: '50%', background: connected ? '#4ade80' : '#78716c', boxShadow: connected ? '0 0 6px #4ade80' : 'none' }} />
             {connected ? 'live' : 'connecting...'}
@@ -195,7 +217,7 @@ export default function App(): React.ReactElement {
           <TabButton active={activeTab === 'timeline'} onClick={() => setActiveTab('timeline')}>
             ⏱️ Timeline
             {agents.length > 0 && (
-              <span style={{ marginLeft: 6, background: '#1e293b', color: '#94a3b8', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>
+              <span style={{ marginLeft: 6, background: 'var(--bg-raised)', color: 'var(--tx-med)', borderRadius: 10, padding: '1px 6px', fontSize: 10 }}>
                 {agents.length}
               </span>
             )}
@@ -205,10 +227,10 @@ export default function App(): React.ReactElement {
 
         <div style={{ display: 'flex', gap: 16, marginLeft: 'auto', alignItems: 'center' }}>
           {lastUpdated && ['sessions', 'dashboard', 'timeline'].includes(activeTab) && (
-            <span style={{ color: '#334155', fontSize: 11 }}>updated {lastUpdated.toLocaleTimeString()}</span>
+            <span style={{ color: 'var(--tx-dim)', fontSize: 11 }}>updated {lastUpdated.toLocaleTimeString()}</span>
           )}
           {activeTab === 'sessions' && (
-            <button onClick={() => setShowReport(true)} aria-label="Generate report" style={{ background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', borderRadius: 8, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+            <button onClick={() => setShowReport(true)} aria-label="Generate report" style={{ background: 'var(--bg-raised)', border: '1px solid var(--border-lt)', color: 'var(--tx-med)', borderRadius: 8, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
               📄 Report
             </button>
           )}
@@ -217,27 +239,28 @@ export default function App(): React.ReactElement {
               <Stat label="Running" value={running}       color="#4ade80" />
               <Stat label="Done"    value={done}          color="#60a5fa" />
               <Stat label="Idle"    value={idle}          color="#6b7280" />
-              <Stat label="Total"   value={agents.length} color="#f1f5f9" />
+              <Stat label="Total"   value={agents.length} color="var(--tx-hi)" />
             </>
           )}
           {activeTab === 'instances' && (
             <>
               <Stat label="Online"  value={onlineInstances}                    color="#4ade80" />
               <Stat label="Offline" value={instances.length - onlineInstances} color="#f87171" />
-              <Stat label="Total"   value={instances.length}                   color="#f1f5f9" />
+              <Stat label="Total"   value={instances.length}                   color="var(--tx-hi)" />
             </>
           )}
           {import.meta.env.VITE_BUILD_SHA && (
-            <span style={{ color: '#334155', fontSize: 11, fontFamily: 'monospace' }}>
+            <span style={{ color: 'var(--tx-dim)', fontSize: 11, fontFamily: 'monospace' }}>
               #{(import.meta.env.VITE_BUILD_SHA as string).slice(0, 7)}
             </span>
           )}
+          <ThemeToggle />
         </div>
       </div>
 
       {/* Main content */}
       <Suspense fallback={
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--tx-lo)' }}>
           <div style={{ fontSize: 14 }}>Loading...</div>
         </div>
       }>
@@ -245,22 +268,22 @@ export default function App(): React.ReactElement {
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           <div style={{ flex: 1 }}>
             {agents.length === 0 ? (
-              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#334155', flexDirection: 'column', gap: 12 }}>
+              <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--tx-lo)', flexDirection: 'column', gap: 12 }}>
                 <div style={{ fontSize: 32 }}>⏳</div>
                 <div style={{ fontSize: 14 }}>Waiting for agent data...</div>
-                <div style={{ fontSize: 12, color: '#1e293b' }}>
+                <div style={{ fontSize: 12, color: 'var(--border)' }}>
                   {connected ? 'Connected — no active sessions yet' : 'Connecting to backend...'}
                 </div>
               </div>
             ) : (
-              <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} nodeTypes={nodeTypes} onNodeClick={onNodeClick} fitView colorMode="dark">
-                <Background color="#1e293b" gap={24} />
+              <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} nodeTypes={nodeTypes} onNodeClick={onNodeClick} fitView colorMode={theme}>
+                <Background color={bgColor} gap={24} />
                 <Controls />
-                <MiniMap nodeColor={(n): string => STATUS_COLOR[(n.data?.status as AgentStatus)] || '#6b7280'} style={{ background: '#0f172a', border: '1px solid #1e293b' }} />
+                <MiniMap nodeColor={(n): string => STATUS_COLOR[(n.data?.status as AgentStatus)] || '#6b7280'} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }} />
               </ReactFlow>
             )}
           </div>
-          <div style={{ width: 340, padding: 16, borderLeft: '1px solid #1e293b', overflow: 'hidden' }}>
+          <div style={{ width: 340, padding: 16, borderLeft: '1px solid var(--border)', overflow: 'hidden' }}>
             <LogPanel agent={selectedAgent} onClose={() => setSelectedAgent(null)} />
           </div>
         </div>

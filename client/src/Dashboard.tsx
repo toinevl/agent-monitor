@@ -13,6 +13,7 @@ import { TrendingUp, DollarSign, Zap, Server, AlertCircle, RefreshCw } from 'luc
 import type { LucideIcon } from 'lucide-react';
 import type { Agent, Edge } from './mockData';
 import type { Instance } from './useAgentState';
+import { useTheme } from './ThemeContext';
 
 Chart.register();
 
@@ -27,17 +28,17 @@ interface MetricCardProps {
 
 function MetricCard({ icon: Icon, label, value, unit = '', color = '#4ade80', subtext = '' }: MetricCardProps): React.ReactElement {
   return (
-    <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
       <div style={{ width: 48, height: 48, borderRadius: 10, background: `${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon size={24} color={color} />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ color: '#94a3b8', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
-        <div style={{ color: '#f1f5f9', fontSize: 28, fontWeight: 700, marginTop: 4 }}>
+        <div style={{ color: 'var(--tx-med)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+        <div style={{ color: 'var(--tx-hi)', fontSize: 28, fontWeight: 700, marginTop: 4 }}>
           {typeof value === 'number' ? value.toLocaleString('en-US', { maximumFractionDigits: 1 }) : value}
-          <span style={{ fontSize: 14, color: '#94a3b8', marginLeft: 4 }}>{unit}</span>
+          <span style={{ fontSize: 14, color: 'var(--tx-med)', marginLeft: 4 }}>{unit}</span>
         </div>
-        {subtext && <div style={{ color: '#475569', fontSize: 11, marginTop: 6 }}>{subtext}</div>}
+        {subtext && <div style={{ color: 'var(--tx-dim)', fontSize: 11, marginTop: 6 }}>{subtext}</div>}
       </div>
     </div>
   );
@@ -52,10 +53,10 @@ interface ChartCardProps {
 
 function ChartCard({ title, children, loading = false, error = null }: ChartCardProps): React.ReactElement {
   return (
-    <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: '24px', minHeight: 400, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ fontSize: 16, fontWeight: 600, color: '#f1f5f9', marginBottom: 20 }}>{title}</div>
+    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '24px', minHeight: 400, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--tx-hi)', marginBottom: 20 }}>{title}</div>
       {loading && (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--tx-lo)' }}>
           <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite' }} />
         </div>
       )}
@@ -81,7 +82,10 @@ interface SnapshotItem {
 }
 
 export default function Dashboard({ instances, agents, edges: _edges }: DashboardProps): React.ReactElement {
-  void agents; // used by parent for live data
+  void agents;
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dateRange, setDateRange]       = useState<number>(7);
 
@@ -92,6 +96,10 @@ export default function Dashboard({ instances, agents, edges: _edges }: Dashboar
   const { snapshots, loading: historyLoading, error: historyError } = useSessionHistory(historyStart, historyEnd);
   const { dailyCost, monthlyCost, costByInstance }                  = useCostMetrics(instances);
   const metrics                                                     = useMetrics(instances, stats);
+
+  const chartGrid   = isDark ? '#1e293b' : '#e2e8f0';
+  const chartTicks  = isDark ? '#64748b' : '#64748b';
+  const chartLegend = isDark ? '#94a3b8' : '#475569';
 
   const agentTrendData = (snapshots as unknown as SnapshotItem[])
     .sort((a, b) => a.timestamp - b.timestamp)
@@ -109,7 +117,7 @@ export default function Dashboard({ instances, agents, edges: _edges }: Dashboar
       data: agentTrendData.data.slice(-24),
       borderColor: '#4ade80', backgroundColor: '#4ade8022',
       tension: 0.3, fill: true, pointRadius: 4,
-      pointBackgroundColor: '#4ade80', pointBorderColor: '#0f172a',
+      pointBackgroundColor: '#4ade80', pointBorderColor: isDark ? '#0f172a' : '#ffffff',
     }],
   };
 
@@ -127,34 +135,35 @@ export default function Dashboard({ instances, agents, edges: _edges }: Dashboar
     datasets: [{
       data: [metrics.onlineInstances, metrics.totalInstances - metrics.onlineInstances],
       backgroundColor: ['#4ade80', '#f87171'],
-      borderColor: '#0f172a', borderWidth: 2,
+      borderColor: isDark ? '#0f172a' : '#ffffff',
+      borderWidth: 2,
     }],
   };
 
   const chartOptions: ChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 12 } } } },
+    plugins: { legend: { labels: { color: chartLegend, font: { size: 12 } } } },
     scales: {
-      y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
-      x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+      y: { ticks: { color: chartTicks }, grid: { color: chartGrid } },
+      x: { ticks: { color: chartTicks }, grid: { color: chartGrid } },
     },
   };
 
   return (
-    <div style={{ padding: '24px', background: '#020617', color: '#f1f5f9', overflow: 'auto', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', background: 'var(--bg-base)', color: 'var(--tx-hi)', overflow: 'auto', minHeight: '100vh' }}>
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>📊 Analytics Dashboard</h1>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <select value={dateRange} onChange={e => setDateRange(parseInt(e.target.value))} style={{ padding: '6px 10px', background: '#1e293b', border: '1px solid #334155', borderRadius: 6, color: '#f1f5f9', fontSize: 12 }}>
+            <select value={dateRange} onChange={e => setDateRange(parseInt(e.target.value))} style={{ padding: '6px 10px', background: 'var(--bg-raised)', border: '1px solid var(--border-lt)', borderRadius: 6, color: 'var(--tx-hi)', fontSize: 12 }}>
               <option value={1}>Last 24h</option>
               <option value={7}>Last 7d</option>
               <option value={30}>Last 30d</option>
             </select>
             <input type="date" value={selectedDate.toISOString().split('T')[0]}
               onChange={e => setSelectedDate(new Date(e.target.value))}
-              style={{ padding: '6px 10px', background: '#1e293b', border: '1px solid #334155', borderRadius: 6, color: '#f1f5f9', fontSize: 12 }} />
+              style={{ padding: '6px 10px', background: 'var(--bg-raised)', border: '1px solid var(--border-lt)', borderRadius: 6, color: 'var(--tx-hi)', fontSize: 12 }} />
           </div>
         </div>
 
@@ -192,14 +201,14 @@ export default function Dashboard({ instances, agents, edges: _edges }: Dashboar
                 { label: 'AVG AGENTS', value: stats.avgAgentCount, color: '#4ade80' },
                 { label: 'MAX AGENTS', value: stats.maxAgentCount, color: '#fbbf24' },
               ] as const).map(item => (
-                <div key={item.label} style={{ background: '#1e293b', padding: 16, borderRadius: 8 }}>
-                  <div style={{ color: '#94a3b8', fontSize: 11, marginBottom: 4 }}>{item.label}</div>
+                <div key={item.label} style={{ background: 'var(--bg-raised)', padding: 16, borderRadius: 8 }}>
+                  <div style={{ color: 'var(--tx-med)', fontSize: 11, marginBottom: 4 }}>{item.label}</div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: item.color }}>{item.value || '—'}</div>
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ color: '#94a3b8', fontSize: 13 }}>No data available for selected date</div>
+            <div style={{ color: 'var(--tx-med)', fontSize: 13 }}>No data available for selected date</div>
           )}
         </ChartCard>
 
@@ -218,7 +227,7 @@ export default function Dashboard({ instances, agents, edges: _edges }: Dashboar
         )}
       </div>
 
-      <div style={{ marginTop: 24, padding: 12, background: '#0f172a', borderRadius: 8, fontSize: 11, color: '#64748b', textAlign: 'center' }}>
+      <div style={{ marginTop: 24, padding: 12, background: 'var(--bg-surface)', borderRadius: 8, fontSize: 11, color: 'var(--tx-lo)', textAlign: 'center' }}>
         Last updated: {new Date().toLocaleTimeString()} • Data syncs every 30 seconds
       </div>
     </div>
