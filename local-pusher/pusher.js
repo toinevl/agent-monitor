@@ -20,6 +20,22 @@ if (!PUSH_URL || !PUSH_TOKEN) {
   process.exit(1);
 }
 
+// ---------- Cost estimation ----------
+
+// Prices in USD per 1M tokens (input / output)
+const MODEL_COSTS = {
+  'claude-opus':   { input: 15,  output: 75 },
+  'claude-sonnet': { input: 3,   output: 15 },
+  'claude-haiku':  { input: 0.8, output: 4  },
+};
+
+function estimateCost(model = '', inputTokens, outputTokens) {
+  const key = Object.keys(MODEL_COSTS).find(k => model.toLowerCase().includes(k));
+  if (!key || (inputTokens == null && outputTokens == null)) return null;
+  const { input, output } = MODEL_COSTS[key];
+  return ((inputTokens || 0) * input + (outputTokens || 0) * output) / 1_000_000;
+}
+
 // ---------- Session → Agent transform ----------
 
 function classifySession(session) {
@@ -52,17 +68,32 @@ function sessionToAgent(session) {
   if (ageSec < 45)    status = 'running';
   else if (ageSec < 3600) status = isMain ? 'listening' : 'done';
 
+  const inputTokens  = session.inputTokens  ?? null;
+  const outputTokens = session.outputTokens ?? null;
+  const totalTokens  = session.totalTokens
+    ?? (inputTokens != null && outputTokens != null ? inputTokens + outputTokens : 0);
+
+  const model = session.model || 'unknown';
+
   return {
-    id:        session.sessionId || session.key,
-    key:       session.key,
-    type:      classifySession(session),
-    label:     session.label || session.key?.split(':').pop() || 'Agent',
+    id:            session.sessionId || session.key,
+    key:           session.key,
+    type:          classifySession(session),
+    label:         session.label || session.key?.split(':').pop() || 'Agent',
     status,
-    model:     session.model    || 'unknown',
-    tokens:    session.totalTokens || 0,
-    updatedAt: session.updatedAt,
+    model,
+    tokens:        totalTokens,
+    inputTokens,
+    outputTokens,
+    cost:          estimateCost(model, inputTokens, outputTokens),
+    updatedAt:     session.updatedAt,
+    startedAt:     session.startedAt ?? session.createdAt ?? null,
     ageSec,
-    task:      session.lastTask || 'Active session',
+    task:          session.lastTask || 'Active session',
+    currentTool:   session.currentTool ?? null,
+    toolCallCount: session.toolCallCount ?? (Array.isArray(session.toolCalls) ? session.toolCalls.length : null),
+    errorCount:    session.errorCount ?? null,
+    parentId:      session.parentId ?? session.parentSessionId ?? null,
   };
 }
 
